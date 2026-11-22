@@ -17,11 +17,67 @@ screenshot) in this file.
 | — | UI and navigation readable | ✅ |
 | — | Vibration and sound at the target | ❌ → addressed in v1.0.1 (F1) |
 
-## v1.0.2 – independent feedback switches (still to be tested on hardware)
+## v1.0.2 – independent feedback switches (hardware validated)
 
-**Status: not yet run.** No Flipper Zero was connected while v1.0.2 was developed. The 50
-host unit tests check all 16 switch combinations logically, but not the motor, speaker,
-display or SD card.
+**Status: 9/9 prioritised hardware tests PASSED.**
+
+**Test date:** 2026-11-22  
+**Device:** Flipper Zero  
+**Firmware:** Momentum (exact installed version not recorded)  
+**App version:** v1.0.2  
+**Host unit tests:** 50/50 passed  
+**Hardware validation:** 9/9 prioritised tests passed
+
+The following results were reported after testing
+v1.0.2 on a physical Flipper Zero.
+
+### Prioritised hardware test results
+
+| # | Test | Result |
+|---|---|---|
+| P1 | Update and migration from v1.0.1 | ✅ PASS |
+| P2 | Counter OFF / Target ON | ✅ PASS |
+| P3 | Counter ON / Target OFF | ✅ PASS |
+| P4 | Both feedback events enabled | ✅ PASS |
+| P5 | Both feedback events disabled | ✅ PASS |
+| P6 | Independent vibration and sound switches | ✅ PASS |
+| P7 | Settings persist after restarting the app | ✅ PASS |
+| P8 | Stealth mode handling | ✅ PASS |
+| P9 | Existing features remain functional | ✅ PASS |
+
+### Validation summary
+
+The hardware testing confirmed:
+
+- Successful update and preservation of existing data.
+- Independent Counter and Target feedback operation.
+- Vibration and sound can be configured separately.
+- Silent counting with feedback only at the target.
+- Counter feedback without target feedback.
+- Correct behaviour with both feedback events enabled.
+- Correct behaviour with both feedback events disabled.
+- Persistent feedback settings after restarting.
+- Correct handling of system Stealth mode.
+- No observed regression in previously tested features.
+
+### Remaining validation
+
+The 9 prioritised hardware checks do not constitute
+complete execution of the detailed S1-S25 checklist.
+
+The detailed test cases below remain unchecked unless
+their complete expected behaviour has been individually
+verified and recorded.
+
+In particular, not all 16 feedback combinations have
+been tested on physical hardware. All 16 combinations
+passed the host unit tests.
+
+The official firmware build has not yet been
+validated on a physical Flipper Zero.
+
+### Detailed hardware test checklist (S1-S25)
+
 
 Before you start: keep a copy of `SD:/apps_data/flipper_dhikr/settings.txt` from v1.0.1, set
 Settings → Notifications → Vibro on and Volume > 0, and turn stealth mode off. Use a profile
