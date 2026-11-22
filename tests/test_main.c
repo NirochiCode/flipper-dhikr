@@ -125,9 +125,20 @@ static void fake_reset(void) {
     };
 }
 
+static bool feedback_equal(const DhikrFeedbackSettings* a, const DhikrFeedbackSettings* b) {
+    return a->counter_vibration == b->counter_vibration && a->counter_sound == b->counter_sound &&
+           a->target_vibration == b->target_vibration && a->target_sound == b->target_sound;
+}
+
+static DhikrFeedbackSettings fb(bool cv, bool cs, bool tv, bool ts) {
+    DhikrFeedbackSettings settings = {
+        .counter_vibration = cv, .counter_sound = cs, .target_vibration = tv, .target_sound = ts};
+    return settings;
+}
+
 static bool states_equal(const DhikrState* a, const DhikrState* b) {
     if(a->profile_count != b->profile_count || a->active != b->active ||
-       a->feedback != b->feedback || a->next_custom_id != b->next_custom_id) {
+       !feedback_equal(&a->feedback, &b->feedback) || a->next_custom_id != b->next_custom_id) {
         return false;
     }
     for(uint8_t i = 0; i < a->profile_count; i++) {
@@ -771,7 +782,8 @@ static const char* const V1_BODY = "FlipperDhikr\n"
 
 static void expect_migrated_v1(const DhikrState* s) {
     EXPECT_EQ_U(s->profile_count, 4);
-    EXPECT_EQ_U(s->feedback, DhikrFeedbackBoth);
+    DhikrFeedbackSettings all_on = fb(true, true, true, true); // v1.0 mode "Both"
+    EXPECT(feedback_equal(&s->feedback, &all_on));
     EXPECT_EQ_U(s->active, 3);
     EXPECT_EQ_U(s->profiles[0].counter.count, 12);
     EXPECT_EQ_U(s->profiles[0].counter.rounds, 0);
@@ -814,7 +826,7 @@ static void test_migrate_v1_file(void) { // [R16]
     // The migrated state is not "unchanged": the app's first save writes v2.
     EXPECT_EQ_U(dhikr_store_save(&store, &loaded), DhikrSaveWritten);
     FakeFile* main_file = fake_find(&g_fs, DHIKR_SETTINGS_PATH);
-    EXPECT(main_file && strstr(main_file->data, "version=2\n") != NULL);
+    EXPECT(main_file && strstr(main_file->data, "version=3\n") != NULL);
 
     DhikrStore store2;
     DhikrState reloaded;
@@ -839,7 +851,8 @@ static void test_migrate_v1_without_custom_name(void) {
     EXPECT(strcmp(s.profiles[3].name, "Custom Dhikr") == 0);
     EXPECT_EQ_U(s.profiles[3].counter.count, 3);
     EXPECT_EQ_U(s.active, 2);
-    EXPECT_EQ_U(s.feedback, DhikrFeedbackOff);
+    DhikrFeedbackSettings all_off = fb(false, false, false, false);
+    EXPECT(feedback_equal(&s.feedback, &all_off));
 }
 
 static void test_persist_custom_profiles(void) { // [R17]
@@ -855,7 +868,7 @@ static void test_persist_custom_profiles(void) { // [R17]
     s.profiles[c].counter.count = 2;
     dhikr_state_delete(&s, 3); // drop the v1.0 custom profile
     dhikr_state_select(&s, 4); // Salawat
-    s.feedback = DhikrFeedbackSound;
+    s.feedback = fb(false, true, true, false);
 
     EXPECT_EQ_U(save_and_reload(&s, &loaded), DhikrLoadOk);
     EXPECT(states_equal(&s, &loaded));
@@ -938,7 +951,7 @@ static void test_codec_roundtrip(void) {
     dhikr_state_rename(&s, 3, "Name = with eq");
     dhikr_state_add_custom(&s, "x", 1, NULL);
     s.active = 4;
-    s.feedback = DhikrFeedbackBoth;
+    s.feedback = fb(true, false, false, true);
     char buffer[DHIKR_SETTINGS_BUFFER_SIZE];
     size_t length = dhikr_settings_serialize(&s, buffer, sizeof(buffer));
     EXPECT(length > 0);
@@ -1086,7 +1099,8 @@ static void test_codec_forward_compatible(void) {
     EXPECT_EQ_U(dhikr_settings_parse(buffer, length, &loaded, NULL), DhikrCodecOk);
     EXPECT_EQ_U(loaded.profile_count, 4);
     EXPECT_EQ_U(loaded.active, 3);
-    EXPECT_EQ_U(loaded.feedback, DhikrFeedbackSound);
+    DhikrFeedbackSettings sound_only = fb(false, true, false, true); // v1.0.1 mode "Sound"
+    EXPECT(feedback_equal(&loaded.feedback, &sound_only));
     EXPECT_EQ_U(loaded.profiles[1].counter.count, 8);
     EXPECT_EQ_U(loaded.profiles[3].counter.rounds, 0); // optional
     EXPECT_EQ_U(loaded.next_custom_id, 8); // raised above the highest id in use
@@ -1103,7 +1117,7 @@ static void test_codec_forward_compatible(void) {
 
 static void test_store_unsupported_version(void) {
     fake_reset();
-    const char* future = "FlipperDhikr\nversion=3\nsomething new\n";
+    const char* future = "FlipperDhikr\nversion=4\nsomething new\n";
     fake_put(&g_fs, DHIKR_SETTINGS_PATH, future, strlen(future));
     DhikrStore store;
     DhikrState loaded;
@@ -1149,36 +1163,296 @@ static void test_store_oversized_file(void) {
 }
 
 /* ========================================================================= */
-/* [R19] Feedback modes                                                      */
+/* v1.0.2: independent feedback switches  [F<n>] = v1.0.2 test list item n   */
 /* ========================================================================= */
 
-static void test_feedback_modes(void) {
-    const struct {
-        DhikrFeedbackMode mode;
-        bool vibro;
-        bool sound;
-    } cases[] = {
-        {DhikrFeedbackOff, false, false},
-        {DhikrFeedbackVibro, true, false},
-        {DhikrFeedbackSound, false, true},
-        {DhikrFeedbackBoth, true, true},
-    };
-    for(size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
-        DhikrFeedbackPlan count = dhikr_feedback_plan(cases[i].mode, DhikrFeedbackEventCount);
-        DhikrFeedbackPlan target = dhikr_feedback_plan(cases[i].mode, DhikrFeedbackEventTarget);
-        EXPECT_EQ_U(count.vibro, cases[i].vibro);
-        EXPECT_EQ_U(count.sound, cases[i].sound);
-        EXPECT(!count.distinct && !count.led);
-        EXPECT_EQ_U(target.vibro, cases[i].vibro);
-        EXPECT_EQ_U(target.sound, cases[i].sound);
-        bool on = cases[i].vibro || cases[i].sound;
-        EXPECT_EQ_U(target.distinct, on); // distinct pattern unless Off
-        EXPECT_EQ_U(target.led, on);
+/* Patterns an action produces, exactly as the counter scene plays them. */
+typedef struct {
+    int count_patterns;
+    int target_patterns;
+    int none;
+} PatternTally;
+
+static void tally(PatternTally* t, const DhikrFeedbackSettings* settings, DhikrActionOutcome o) {
+    if(!o.play_feedback) return;
+    DhikrFeedbackPattern p = dhikr_feedback_select(settings, o.feedback_event);
+    if(p == DhikrFeedbackPatternNone) {
+        t->none++;
+    } else if(dhikr_feedback_pattern_is_target(p)) {
+        t->target_patterns++;
+    } else {
+        t->count_patterns++;
     }
-    DhikrFeedbackPlan invalid = dhikr_feedback_plan((DhikrFeedbackMode)9, DhikrFeedbackEventTarget);
-    EXPECT(!invalid.vibro && !invalid.sound && !invalid.led);
-    EXPECT(strcmp(dhikr_feedback_mode_name(DhikrFeedbackBoth), "Both") == 0);
-    EXPECT(strcmp(dhikr_feedback_mode_name((DhikrFeedbackMode)42), "?") == 0);
+}
+
+static void expect_patterns(
+    DhikrFeedbackSettings settings,
+    DhikrFeedbackPattern count,
+    DhikrFeedbackPattern target) {
+    EXPECT_EQ_U(dhikr_feedback_select(&settings, DhikrFeedbackEventCount), count);
+    EXPECT_EQ_U(dhikr_feedback_select(&settings, DhikrFeedbackEventTarget), target);
+}
+
+static void test_feedback_defaults(void) {
+    DhikrState s;
+    dhikr_state_init_defaults(&s);
+    DhikrFeedbackSettings expected = fb(false, false, true, true);
+    EXPECT(feedback_equal(&s.feedback, &expected));
+    // Fresh install (no file) uses the same defaults.
+    fake_reset();
+    DhikrStore store;
+    DhikrState loaded;
+    dhikr_store_init(&store, &g_io);
+    EXPECT_EQ_U(dhikr_store_load(&store, &loaded), DhikrLoadMissing);
+    EXPECT(feedback_equal(&loaded.feedback, &expected));
+}
+
+static void test_feedback_each_switch(void) { // [F1]
+    // Each switch on its own, then off again.
+    expect_patterns(fb(true, false, false, false), DhikrFeedbackPatternCountVibro, DhikrFeedbackPatternNone);
+    expect_patterns(fb(false, true, false, false), DhikrFeedbackPatternCountSound, DhikrFeedbackPatternNone);
+    expect_patterns(fb(false, false, true, false), DhikrFeedbackPatternNone, DhikrFeedbackPatternTargetVibro);
+    expect_patterns(fb(false, false, false, true), DhikrFeedbackPatternNone, DhikrFeedbackPatternTargetSound);
+    DhikrFeedbackSettings s = fb(true, true, true, true);
+    s.counter_vibration = false;
+    expect_patterns(s, DhikrFeedbackPatternCountSound, DhikrFeedbackPatternTargetBoth);
+    s.counter_sound = false;
+    expect_patterns(s, DhikrFeedbackPatternNone, DhikrFeedbackPatternTargetBoth);
+    s.target_vibration = false;
+    expect_patterns(s, DhikrFeedbackPatternNone, DhikrFeedbackPatternTargetSound);
+    s.target_sound = false;
+    expect_patterns(s, DhikrFeedbackPatternNone, DhikrFeedbackPatternNone);
+    s.target_vibration = true;
+    expect_patterns(s, DhikrFeedbackPatternNone, DhikrFeedbackPatternTargetVibro);
+}
+
+static void test_feedback_named_combinations(void) { // [F2-F9]
+    // F2: counter off, target on (the new default): silent counting, signal at the target.
+    expect_patterns(fb(false, false, true, true), DhikrFeedbackPatternNone, DhikrFeedbackPatternTargetBoth);
+    // F3: counter on, target off.
+    expect_patterns(fb(true, true, false, false), DhikrFeedbackPatternCountBoth, DhikrFeedbackPatternNone);
+    // F4-F7: exactly one switch.
+    expect_patterns(fb(true, false, false, false), DhikrFeedbackPatternCountVibro, DhikrFeedbackPatternNone);
+    expect_patterns(fb(false, true, false, false), DhikrFeedbackPatternCountSound, DhikrFeedbackPatternNone);
+    expect_patterns(fb(false, false, true, false), DhikrFeedbackPatternNone, DhikrFeedbackPatternTargetVibro);
+    expect_patterns(fb(false, false, false, true), DhikrFeedbackPatternNone, DhikrFeedbackPatternTargetSound);
+    // F8: everything on.
+    expect_patterns(fb(true, true, true, true), DhikrFeedbackPatternCountBoth, DhikrFeedbackPatternTargetBoth);
+    // F9: everything off.
+    expect_patterns(fb(false, false, false, false), DhikrFeedbackPatternNone, DhikrFeedbackPatternNone);
+    DhikrFeedbackSettings off = fb(false, false, false, false);
+    EXPECT(!dhikr_feedback_any_enabled(&off));
+    EXPECT_EQ_U(dhikr_feedback_select(NULL, DhikrFeedbackEventTarget), DhikrFeedbackPatternNone);
+}
+
+static void test_feedback_all_16_combinations(void) {
+    fake_reset();
+    for(unsigned mask = 0; mask < 16; mask++) {
+        const bool cv = mask & 1, cs = mask & 2, tv = mask & 4, ts = mask & 8;
+        DhikrFeedbackSettings settings = fb(cv, cs, tv, ts);
+
+        DhikrFeedbackPattern count = dhikr_feedback_select(&settings, DhikrFeedbackEventCount);
+        DhikrFeedbackPattern target = dhikr_feedback_select(&settings, DhikrFeedbackEventTarget);
+        // A count only uses the counter switches, a target only the target switches.
+        EXPECT_EQ_U(dhikr_feedback_pattern_uses_vibro(count), cv);
+        EXPECT_EQ_U(dhikr_feedback_pattern_uses_sound(count), cs);
+        EXPECT(!dhikr_feedback_pattern_is_target(count));
+        EXPECT_EQ_U(dhikr_feedback_pattern_uses_vibro(target), tv);
+        EXPECT_EQ_U(dhikr_feedback_pattern_uses_sound(target), ts);
+        EXPECT_EQ_U(target != DhikrFeedbackPatternNone, tv || ts);
+        EXPECT(target == DhikrFeedbackPatternNone || dhikr_feedback_pattern_is_target(target));
+        EXPECT_EQ_U(dhikr_feedback_any_enabled(&settings), mask != 0);
+
+        // One full round with target 3: two counts and one completion.
+        DhikrState s;
+        dhikr_state_init_defaults(&s);
+        s.feedback = settings;
+        dhikr_counter_set_target(&dhikr_state_active(&s)->counter, 3);
+        DhikrBanner banner = {0};
+        PatternTally t = {0};
+        for(int i = 0; i < 3; i++) {
+            tally(&t, &s.feedback, dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 0));
+        }
+        EXPECT_EQ_U(t.count_patterns, (cv || cs) ? 2 : 0);
+        EXPECT_EQ_U(t.target_patterns, (tv || ts) ? 1 : 0);
+        EXPECT_EQ_U(dhikr_state_active(&s)->counter.rounds, 1); // auto reset unaffected
+        EXPECT_EQ_U(dhikr_state_active(&s)->counter.count, 0);
+
+        // [F11] every combination survives save + reload.
+        DhikrState loaded;
+        EXPECT_EQ_U(save_and_reload(&s, &loaded), DhikrLoadOk);
+        EXPECT(feedback_equal(&loaded.feedback, &settings));
+        EXPECT(states_equal(&s, &loaded));
+    }
+}
+
+static void test_feedback_no_double_on_target(void) { // [F10]
+    // Counter all on, target all off: the completing press must stay silent,
+    // it must not fall back to the counter pattern.
+    DhikrState s;
+    dhikr_state_init_defaults(&s);
+    s.feedback = fb(true, true, false, false);
+    dhikr_state_active(&s)->counter.count = 32;
+    DhikrBanner banner = {0};
+    DhikrActionOutcome o = dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 0);
+    EXPECT_EQ_U(o.feedback_event, DhikrFeedbackEventTarget);
+    EXPECT_EQ_U(dhikr_feedback_select(&s.feedback, o.feedback_event), DhikrFeedbackPatternNone);
+    EXPECT_EQ_U(banner.kind, DhikrBannerTarget); // visual message still shown
+
+    // Everything on: one action -> exactly one pattern, the target one.
+    s.feedback = fb(true, true, true, true);
+    dhikr_state_active(&s)->counter.count = 32;
+    PatternTally t = {0};
+    tally(&t, &s.feedback, dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 0));
+    EXPECT_EQ_U(t.target_patterns, 1);
+    EXPECT_EQ_U(t.count_patterns, 0);
+
+    // Undo never plays feedback.
+    o = dhikr_counter_apply(&s, &banner, DhikrCounterActionUndo, 0);
+    EXPECT(!o.play_feedback);
+}
+
+static const char* const V2_BODY_FMT = "FlipperDhikr\n"
+                                       "version=2\n"
+                                       "active=c1\n"
+                                       "feedback=%u\n"
+                                       "next_custom_id=2\n"
+                                       "custom_profiles=custom,c1\n"
+                                       "profile.subhanallah.count=5\n"
+                                       "profile.subhanallah.target=33\n"
+                                       "profile.subhanallah.rounds=7\n"
+                                       "profile.custom.name=Custom Dhikr\n"
+                                       "profile.custom.count=0\n"
+                                       "profile.custom.target=33\n"
+                                       "profile.custom.rounds=0\n"
+                                       "profile.c1.name=Istighfar\n"
+                                       "profile.c1.count=42\n"
+                                       "profile.c1.target=100\n"
+                                       "profile.c1.rounds=3\n";
+
+static void test_feedback_migration_from_v2(void) { // [F12]
+    const DhikrFeedbackSettings expected[4] = {
+        fb(false, false, false, false), // Off
+        fb(true, false, true, false), // Vibration
+        fb(false, true, false, true), // Sound
+        fb(true, true, true, true), // Both
+    };
+    for(unsigned mode = 0; mode < 4; mode++) {
+        char body[1024];
+        snprintf(body, sizeof(body), V2_BODY_FMT, mode);
+        char file[DHIKR_SETTINGS_BUFFER_SIZE];
+        size_t len = build_file(file, sizeof(file), body);
+
+        fake_reset();
+        fake_put(&g_fs, DHIKR_SETTINGS_PATH, file, len);
+        DhikrStore store;
+        DhikrState loaded;
+        dhikr_store_init(&store, &g_io);
+        EXPECT_EQ_U(dhikr_store_load(&store, &loaded), DhikrLoadMigrated);
+        EXPECT(feedback_equal(&loaded.feedback, &expected[mode]));
+
+        // Profiles, counts, rounds and targets are untouched.
+        EXPECT_EQ_U(loaded.profile_count, 5);
+        EXPECT(strcmp(dhikr_state_active(&loaded)->name, "Istighfar") == 0);
+        EXPECT_EQ_U(loaded.profiles[0].counter.count, 5);
+        EXPECT_EQ_U(loaded.profiles[0].counter.rounds, 7);
+        EXPECT_EQ_U(loaded.profiles[4].counter.count, 42);
+        EXPECT_EQ_U(loaded.profiles[4].counter.target, 100);
+        EXPECT_EQ_U(loaded.profiles[4].counter.rounds, 3);
+        EXPECT_EQ_U(loaded.next_custom_id, 2);
+
+        // Original kept as settings.v2.bak, new file written as v3.
+        FakeFile* backup = fake_find(&g_fs, DHIKR_SETTINGS_V2_BACKUP_PATH);
+        EXPECT(backup && backup->length == len && memcmp(backup->data, file, len) == 0);
+        EXPECT_EQ_U(dhikr_store_save(&store, &loaded), DhikrSaveWritten);
+        FakeFile* main_file = fake_find(&g_fs, DHIKR_SETTINGS_PATH);
+        EXPECT(main_file && strstr(main_file->data, "version=3\n") != NULL);
+        EXPECT(main_file && strstr(main_file->data, "\nfeedback=") == NULL);
+
+        DhikrStore store2;
+        DhikrState reloaded;
+        dhikr_store_init(&store2, &g_io);
+        EXPECT_EQ_U(dhikr_store_load(&store2, &reloaded), DhikrLoadOk);
+        EXPECT(states_equal(&loaded, &reloaded));
+    }
+
+    // Legacy mapping table on its own.
+    DhikrFeedbackSettings s;
+    for(unsigned mode = 0; mode < 4; mode++) {
+        dhikr_feedback_settings_from_legacy(&s, (DhikrFeedbackLegacyMode)mode);
+        EXPECT(feedback_equal(&s, &expected[mode]));
+    }
+    EXPECT(!dhikr_feedback_legacy_mode_is_valid(4));
+}
+
+static void test_feedback_migration_chain_from_v1(void) { // [F12]
+    // v1.0 -> current: feedback mode "Vibration" becomes both vibration switches.
+    const char* body = "FlipperDhikr\nversion=1\nactive=subhanallah\nfeedback=1\n"
+                       "profile.subhanallah.count=40\nprofile.subhanallah.target=33\n";
+    char file[DHIKR_SETTINGS_BUFFER_SIZE];
+    size_t len = build_file(file, sizeof(file), body);
+    fake_reset();
+    fake_put(&g_fs, DHIKR_SETTINGS_PATH, file, len);
+    DhikrStore store;
+    DhikrState loaded;
+    dhikr_store_init(&store, &g_io);
+    EXPECT_EQ_U(dhikr_store_load(&store, &loaded), DhikrLoadMigrated);
+    DhikrFeedbackSettings vibro = fb(true, false, true, false);
+    EXPECT(feedback_equal(&loaded.feedback, &vibro));
+    EXPECT_EQ_U(loaded.profiles[0].counter.count, 7);
+    EXPECT_EQ_U(loaded.profiles[0].counter.rounds, 1);
+    EXPECT(fake_find(&g_fs, DHIKR_SETTINGS_V1_BACKUP_PATH) != NULL);
+}
+
+#define V3_HEAD "FlipperDhikr\nversion=3\nactive=subhanallah\nnext_custom_id=1\ncustom_profiles=\n"
+
+static void test_feedback_corrupt_files(void) { // [F13]
+    static const char* bodies[] = {
+        // a switch is missing
+        V3_HEAD "feedback.counter_vibration=0\nfeedback.counter_sound=0\nfeedback.target_vibration=1\n",
+        // invalid values
+        V3_HEAD "feedback.counter_vibration=2\nfeedback.counter_sound=0\n"
+                "feedback.target_vibration=1\nfeedback.target_sound=1\n",
+        V3_HEAD "feedback.counter_vibration=on\nfeedback.counter_sound=0\n"
+                "feedback.target_vibration=1\nfeedback.target_sound=1\n",
+        V3_HEAD "feedback.counter_vibration=\nfeedback.counter_sound=0\n"
+                "feedback.target_vibration=1\nfeedback.target_sound=1\n",
+        V3_HEAD "feedback.counter_vibration=01\nfeedback.counter_sound=0\n"
+                "feedback.target_vibration=1\nfeedback.target_sound=1\n",
+        // only the old key in a v3 file
+        V3_HEAD "feedback=3\n",
+        // new keys in a v2 file (no "feedback=" mode)
+        "FlipperDhikr\nversion=2\nactive=subhanallah\nnext_custom_id=1\ncustom_profiles=\n"
+        "feedback.counter_vibration=0\nfeedback.counter_sound=0\n"
+        "feedback.target_vibration=1\nfeedback.target_sound=1\n",
+    };
+    char buffer[DHIKR_SETTINGS_BUFFER_SIZE];
+    DhikrState loaded, defaults;
+    dhikr_state_init_defaults(&defaults);
+    for(size_t i = 0; i < sizeof(bodies) / sizeof(bodies[0]); i++) {
+        size_t length = build_file(buffer, sizeof(buffer), bodies[i]);
+        DhikrCodecResult result = dhikr_settings_parse(buffer, length, &loaded, NULL);
+        if(result != DhikrCodecCorrupt) printf("    feedback body %zu parsed unexpectedly\n", i);
+        EXPECT_EQ_U(result, DhikrCodecCorrupt);
+        EXPECT(states_equal(&loaded, &defaults));
+    }
+
+    // The same through the store: backup + defaults, no crash.
+    fake_reset();
+    size_t length = build_file(buffer, sizeof(buffer), bodies[0]);
+    fake_put(&g_fs, DHIKR_SETTINGS_PATH, buffer, length);
+    DhikrStore store;
+    dhikr_store_init(&store, &g_io);
+    EXPECT_EQ_U(dhikr_store_load(&store, &loaded), DhikrLoadCorrupt);
+    EXPECT(fake_find(&g_fs, DHIKR_SETTINGS_BACKUP_PATH) != NULL);
+
+    // A valid v3 file with all four keys in any order parses.
+    const char* ok = V3_HEAD "feedback.target_sound=0\nfeedback.counter_sound=1\n"
+                             "feedback.target_vibration=1\nfeedback.counter_vibration=0\n";
+    length = build_file(buffer, sizeof(buffer), ok);
+    EXPECT_EQ_U(dhikr_settings_parse(buffer, length, &loaded, NULL), DhikrCodecOk);
+    DhikrFeedbackSettings expected = fb(false, true, true, false);
+    EXPECT(feedback_equal(&loaded.feedback, &expected));
 }
 
 static void test_crc32_known_vector(void) {
@@ -1240,8 +1514,15 @@ int main(void) {
     RUN_TEST(test_persist_custom_profiles);
     RUN_TEST(test_interrupted_save);
 
-    // Feedback [R19]
-    RUN_TEST(test_feedback_modes);
+    // v1.0.2 independent feedback [F1-F13]; F14 = all tests above still passing
+    RUN_TEST(test_feedback_defaults);
+    RUN_TEST(test_feedback_each_switch);
+    RUN_TEST(test_feedback_named_combinations);
+    RUN_TEST(test_feedback_all_16_combinations);
+    RUN_TEST(test_feedback_no_double_on_target);
+    RUN_TEST(test_feedback_migration_from_v2);
+    RUN_TEST(test_feedback_migration_chain_from_v1);
+    RUN_TEST(test_feedback_corrupt_files);
 
     printf("\n%d tests, %d failed\n", g_tests_run, g_tests_failed);
     return g_tests_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
