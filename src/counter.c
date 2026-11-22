@@ -2,29 +2,57 @@
 
 #include <stddef.h>
 
+static void counter_clear_undo(DhikrCounter* counter) {
+    counter->undo_round_available = false;
+    counter->count_before_completion = 0;
+}
+
 void dhikr_counter_init(DhikrCounter* counter, uint32_t target) {
     if(counter == NULL) return;
     counter->count = 0;
+    counter->rounds = 0;
     counter->target = dhikr_target_is_valid(target) ? target : DHIKR_TARGET_DEFAULT;
+    counter_clear_undo(counter);
 }
 
 DhikrIncrementResult dhikr_counter_increment(DhikrCounter* counter) {
-    if(counter == NULL || counter->count >= DHIKR_COUNT_MAX) {
-        return DhikrIncrementSaturated;
+    if(counter == NULL) return DhikrIncrementCounted;
+
+    // count + 1 >= target, written so that it cannot overflow.
+    if(counter->count >= counter->target || counter->target - counter->count <= 1) {
+        counter->count_before_completion = counter->count;
+        counter->undo_round_available = true;
+        counter->count = 0;
+        if(counter->rounds < DHIKR_ROUNDS_MAX) counter->rounds++;
+        return DhikrIncrementRoundCompleted;
     }
 
-    const bool was_complete = dhikr_counter_is_complete(counter);
     counter->count++;
-
-    if(!was_complete && dhikr_counter_is_complete(counter)) {
-        return DhikrIncrementTargetReached;
-    }
+    counter_clear_undo(counter);
     return DhikrIncrementCounted;
+}
+
+DhikrUndoResult dhikr_counter_undo(DhikrCounter* counter) {
+    if(counter == NULL) return DhikrUndoNothing;
+
+    if(counter->count == 0 && counter->undo_round_available && counter->rounds > 0) {
+        counter->count = counter->count_before_completion;
+        counter->rounds--;
+        counter_clear_undo(counter);
+        return DhikrUndoRoundRestored;
+    }
+
+    counter_clear_undo(counter);
+    if(counter->count == 0) return DhikrUndoNothing;
+    counter->count--;
+    return DhikrUndoDecremented;
 }
 
 void dhikr_counter_reset(DhikrCounter* counter) {
     if(counter == NULL) return;
     counter->count = 0;
+    counter->rounds = 0;
+    counter_clear_undo(counter);
 }
 
 bool dhikr_target_is_valid(uint32_t target) {
@@ -34,15 +62,9 @@ bool dhikr_target_is_valid(uint32_t target) {
 bool dhikr_counter_set_target(DhikrCounter* counter, uint32_t target) {
     if(counter == NULL || !dhikr_target_is_valid(target)) return false;
     counter->target = target;
+    // The restored count would refer to the old target.
+    counter_clear_undo(counter);
     return true;
-}
-
-bool dhikr_counter_is_complete(const DhikrCounter* counter) {
-    return counter != NULL && counter->count >= counter->target;
-}
-
-bool dhikr_counter_is_saturated(const DhikrCounter* counter) {
-    return counter != NULL && counter->count >= DHIKR_COUNT_MAX;
 }
 
 uint32_t dhikr_counter_progress_permille(const DhikrCounter* counter) {
@@ -54,5 +76,16 @@ uint32_t dhikr_counter_progress_permille(const DhikrCounter* counter) {
 
 bool dhikr_counter_is_valid(const DhikrCounter* counter) {
     return counter != NULL && counter->count <= DHIKR_COUNT_MAX &&
-           dhikr_target_is_valid(counter->target);
+           counter->rounds <= DHIKR_ROUNDS_MAX && dhikr_target_is_valid(counter->target);
+}
+
+void dhikr_counter_normalize(DhikrCounter* counter) {
+    if(counter == NULL || !dhikr_target_is_valid(counter->target)) return;
+    if(counter->count < counter->target) return;
+
+    uint32_t extra_rounds = counter->count / counter->target;
+    counter->count %= counter->target;
+    uint32_t rounds = counter->rounds + extra_rounds; // both <= 999999: no overflow
+    counter->rounds = rounds > DHIKR_ROUNDS_MAX ? DHIKR_ROUNDS_MAX : rounds;
+    counter_clear_undo(counter);
 }
