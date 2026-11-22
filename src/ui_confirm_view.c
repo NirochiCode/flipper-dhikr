@@ -97,6 +97,7 @@ static bool confirm_view_input(InputEvent* event, void* context) {
 
 DhikrConfirmView* dhikr_confirm_view_alloc(void) {
     DhikrConfirmView* confirm_view = malloc(sizeof(DhikrConfirmView));
+    furi_check(confirm_view); // never NULL on Flipper; stated for static analyzers
     confirm_view->view = view_alloc();
     confirm_view->callback = NULL;
     confirm_view->context = NULL;

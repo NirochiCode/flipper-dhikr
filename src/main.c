@@ -29,12 +29,30 @@ static void dhikr_app_save(DhikrApp* app) {
     } else {
         app->last_save_failed = false;
         app->dirty = false;
+        app->has_saved = true;
+        app->last_save_tick = furi_get_tick();
         if(result == DhikrSaveWritten) FURI_LOG_D(TAG, "Saved");
     }
 }
 
+void dhikr_app_show_notice(DhikrApp* app, const char* title, const char* text) {
+    app->notice_title = title;
+    app->notice_text = text;
+    scene_manager_next_scene(app->scene_manager, DhikrSceneNotice);
+}
+
 void dhikr_app_save_if_dirty(DhikrApp* app) {
     if(app->dirty) dhikr_app_save(app);
+}
+
+void dhikr_app_save_soon(DhikrApp* app) {
+    if(!app->dirty) return;
+    if(!app->has_saved || furi_get_tick() - app->last_save_tick >=
+                              furi_ms_to_ticks(DHIKR_IMMEDIATE_SAVE_MIN_INTERVAL_MS)) {
+        dhikr_app_save(app);
+    } else {
+        dhikr_app_autosave_tick(app);
+    }
 }
 
 void dhikr_app_autosave_tick(DhikrApp* app) {
@@ -75,14 +93,41 @@ static void dhikr_app_load(DhikrApp* app) {
     FURI_LOG_I(TAG, "Load result: %d", app->load_result);
 
     if(app->load_result != DhikrLoadOk) {
-        // First start, recovered or reset to defaults: persist a valid file right away.
+        // First start, migrated, recovered or reset to defaults: persist right away.
         dhikr_app_mark_dirty(app);
         if(!app->store.read_only) dhikr_app_save(app);
     }
 }
 
+/** @return text for a start-up notice, or NULL if loading went fine. */
+static const char* dhikr_app_load_notice(const DhikrApp* app) {
+    if(app->store.read_only) {
+        return app->load_result == DhikrLoadIoError ? "SD card not readable.\n"
+                                                      "Defaults loaded. Progress\n"
+                                                      "will NOT be saved now." :
+                                                      "Saved data is invalid and\n"
+                                                      "could not be moved away.\n"
+                                                      "Saving disabled.";
+    }
+    switch(app->load_result) {
+    case DhikrLoadUnsupported:
+        return "Data from a newer app\n"
+               "version. Defaults loaded.\n"
+               "Old file: settings.bak";
+    case DhikrLoadCorrupt:
+        return "Saved data was damaged.\n"
+               "Defaults loaded.\n"
+               "Old file: settings.bak";
+    default:
+        // Ok, Missing (first start), Recovered and Migrated need no notice.
+        return NULL;
+    }
+}
+
 static DhikrApp* dhikr_app_alloc(void) {
+    // Flipper's malloc never returns NULL (it halts on out-of-memory); stated for analyzers.
     DhikrApp* app = malloc(sizeof(DhikrApp));
+    furi_check(app);
     memset(app, 0, sizeof(DhikrApp));
 
     app->gui = furi_record_open(RECORD_GUI);
@@ -163,10 +208,8 @@ int32_t flipper_dhikr_app(void* p) {
     DhikrApp* app = dhikr_app_alloc();
 
     scene_manager_next_scene(app->scene_manager, DhikrSceneMainMenu);
-    if(app->load_result != DhikrLoadOk && app->load_result != DhikrLoadMissing &&
-       app->load_result != DhikrLoadRecovered) {
-        scene_manager_next_scene(app->scene_manager, DhikrSceneNotice);
-    }
+    const char* notice = dhikr_app_load_notice(app);
+    if(notice != NULL) dhikr_app_show_notice(app, "Storage notice", notice);
 
     view_dispatcher_run(app->view_dispatcher);
 

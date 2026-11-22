@@ -70,6 +70,7 @@ bool dhikr_scene_target_on_event(void* context, SceneManagerEvent event) {
         return true;
     }
     case TargetItemCustom:
+        app->target_mode = DhikrTargetModeActive;
         scene_manager_next_scene(app->scene_manager, DhikrSceneTargetCustom);
         return true;
     default:

@@ -1,4 +1,4 @@
-/* Shown once at start-up when saved data could not be used. */
+/* Generic message screen (title + text from app->notice_*); OK or Back closes it. */
 #include "include/dhikr_app.h"
 
 static void notice_button_callback(GuiButtonType result, InputType type, void* context) {
@@ -8,32 +8,25 @@ static void notice_button_callback(GuiButtonType result, InputType type, void* c
     }
 }
 
-static const char* notice_text(const DhikrApp* app) {
-    if(app->store.read_only) {
-        return app->load_result == DhikrLoadIoError ? "SD card not readable.\n"
-                                                      "Defaults loaded. Progress\n"
-                                                      "will NOT be saved now." :
-                                                      "Saved data is invalid and\n"
-                                                      "could not be moved away.\n"
-                                                      "Saving disabled.";
-    }
-    if(app->load_result == DhikrLoadUnsupported) {
-        return "Data from a newer app\n"
-               "version. Defaults loaded.\n"
-               "Old file: settings.bak";
-    }
-    return "Saved data was damaged.\n"
-           "Defaults loaded.\n"
-           "Old file: settings.bak";
-}
-
 void dhikr_scene_notice_on_enter(void* context) {
     DhikrApp* app = context;
     widget_reset(app->widget);
     widget_add_string_element(
-        app->widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "Storage notice");
+        app->widget,
+        64,
+        2,
+        AlignCenter,
+        AlignTop,
+        FontPrimary,
+        app->notice_title ? app->notice_title : "");
     widget_add_string_multiline_element(
-        app->widget, 64, 16, AlignCenter, AlignTop, FontSecondary, notice_text(app));
+        app->widget,
+        64,
+        16,
+        AlignCenter,
+        AlignTop,
+        FontSecondary,
+        app->notice_text ? app->notice_text : "");
     widget_add_button_element(
         app->widget, GuiButtonTypeCenter, "OK", notice_button_callback, app);
     view_dispatcher_switch_to_view(app->view_dispatcher, DhikrViewWidget);

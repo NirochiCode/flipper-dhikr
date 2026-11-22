@@ -10,17 +10,13 @@
 
 #include <gui/view.h>
 
+#include "include/counter_input.h"
 #include "include/profiles.h"
 
 /* --- Counter view ------------------------------------------------------------ */
 
-typedef enum {
-    DhikrCounterViewEventIncrement,
-    DhikrCounterViewEventPrevProfile,
-    DhikrCounterViewEventNextProfile,
-} DhikrCounterViewEvent;
-
-typedef void (*DhikrCounterViewCallback)(DhikrCounterViewEvent event, void* context);
+/** Receives the mapped action (see counter_input.h); never DhikrCounterActionNone/Exit. */
+typedef void (*DhikrCounterViewCallback)(DhikrCounterAction action, void* context);
 
 typedef struct DhikrCounterView DhikrCounterView;
 
@@ -31,11 +27,20 @@ void dhikr_counter_view_set_callback(
     DhikrCounterView* counter_view,
     DhikrCounterViewCallback callback,
     void* context);
-/** Copy what is needed to draw the given profile. */
+/**
+ * Copy what is needed to draw the given profile. A visible banner is drawn
+ * until it expires; a one-shot timer redraws the screen at that moment.
+ * @param muted show a "Muted" hint (feedback enabled but stealth mode on)
+ */
 void dhikr_counter_view_update(
     DhikrCounterView* counter_view,
     const DhikrProfile* profile,
-    uint8_t profile_count);
+    uint8_t profile_count,
+    const DhikrBanner* banner,
+    bool muted);
+
+/** Milliseconds since boot, for banner timing. */
+uint32_t dhikr_ui_now_ms(void);
 
 /* --- Confirm view ------------------------------------------------------------ */
 

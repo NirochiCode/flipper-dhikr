@@ -13,7 +13,10 @@
     X(MainMenu, main_menu)             \
     X(Counter, counter)                \
     X(Profiles, profiles)              \
-    X(Rename, rename)                  \
+    X(ProfileEdit, profile_edit)       \
+    X(ProfileActions, profile_actions) \
+    X(ProfileName, profile_name)       \
+    X(ProfileDelete, profile_delete)   \
     X(Target, target)                  \
     X(TargetCustom, target_custom)     \
     X(Feedback, feedback)              \

@@ -17,8 +17,9 @@ void dhikr_scene_reset_on_enter(void* context) {
     snprintf(
         count_line,
         sizeof(count_line),
-        "Current count: %lu",
-        (unsigned long)profile->counter.count);
+        "Count %lu, rounds %lu",
+        (unsigned long)profile->counter.count,
+        (unsigned long)profile->counter.rounds);
 
     // Selection always starts at "No".
     dhikr_confirm_view_setup(app->confirm_view, "Reset counter?", profile->name, count_line);
@@ -31,7 +32,7 @@ bool dhikr_scene_reset_on_event(void* context, SceneManagerEvent event) {
     if(event.type != SceneManagerEventTypeCustom) return false;
 
     if(event.event == DhikrEventConfirmAccepted) {
-        // Only the active profile is reset; persist the new value immediately.
+        // Only the active profile is reset (count and rounds); persist the new value immediately.
         dhikr_state_reset_active(&app->state);
         dhikr_app_mark_dirty(app);
         dhikr_app_save_if_dirty(app);

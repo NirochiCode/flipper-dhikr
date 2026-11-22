@@ -6,11 +6,12 @@ App(
     apptype=FlipperAppType.EXTERNAL,
     entry_point="flipper_dhikr_app",
     requires=["gui", "storage", "notification"],
-    stack_size=4 * 1024,
+    stack_size=6 * 1024,
     # Only firmware sources; host unit tests live in tests/ and are built separately.
     sources=["src/*.c"],
     fap_icon="assets/flipper_dhikr_10px.png",
     fap_category="Tools",
+    # FAP metadata only stores major.minor; the full version (1.0.1) is DHIKR_APP_VERSION.
     fap_version="1.0",
     fap_description="Digital tasbih counter with multiple dhikr profiles, targets, persistent progress and vibration/sound feedback.",
     fap_author="Flipper Dhikr contributors",
