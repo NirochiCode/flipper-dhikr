@@ -1,0 +1,17 @@
+# Flipper Dhikr - application manifest
+# Build: ufbt   (see README.md)
+App(
+    appid="flipper_dhikr",
+    name="Flipper Dhikr",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="flipper_dhikr_app",
+    requires=["gui", "storage", "notification"],
+    stack_size=4 * 1024,
+    # Only firmware sources; host unit tests live in tests/ and are built separately.
+    sources=["src/*.c"],
+    fap_icon="assets/flipper_dhikr_10px.png",
+    fap_category="Tools",
+    fap_version="1.0",
+    fap_description="Digital tasbih counter with multiple dhikr profiles, targets, persistent progress and vibration/sound feedback.",
+    fap_author="Flipper Dhikr contributors",
+)
