@@ -17,10 +17,72 @@ screenshot) in this file.
 | — | UI and navigation readable | ✅ |
 | — | Vibration and sound at the target | ❌ → addressed in v1.0.1 (F1) |
 
-## v1.0.1 – still to be tested on hardware
+## v1.0.2 – independent feedback switches (still to be tested on hardware)
 
-**Status: not yet run.** No Flipper Zero was connected while v1.0.1 was developed. The
-43 host unit tests cover the logic but not the display, buttons, motor, speaker or SD card.
+**Status: not yet run.** No Flipper Zero was connected while v1.0.2 was developed. The 50
+host unit tests check all 16 switch combinations logically, but not the motor, speaker,
+display or SD card.
+
+Before you start: keep a copy of `SD:/apps_data/flipper_dhikr/settings.txt` from v1.0.1, set
+Settings → Notifications → Vibro on and Volume > 0, and turn stealth mode off. Use a profile
+with target 3 to complete rounds quickly.
+
+### Migration and defaults
+
+| # | Test | Expected | Result |
+|---|---|---|---|
+| S1 | Install v1.0.2 over v1.0.1 (your current mode, e.g. "Both") | Switches match the old mode (Both → all ON; Vibration → both Vibration ON; Sound → both Sound ON; Off → all OFF); profiles, counts, rounds, targets unchanged; `settings.v2.bak` exists; `settings.txt` has `version=3` | ☐ |
+| S2 | Fresh install (rename `apps_data/flipper_dhikr` first) | Counter Vibration OFF, Counter Sound OFF, Target Vibration ON, Target Sound ON | ☐ |
+| S3 | Change switches, exit app, reopen | All four values kept | ☐ |
+
+### Menu
+
+| # | Test | Expected | Result |
+|---|---|---|---|
+| S4 | Feedback Settings | `Counter Feedback >`, `Target Feedback >`, `Stealth: …`, `Help` | ☐ |
+| S5 | Counter Feedback → OK on Vibration | `Vibration: ON` ↔ `OFF` changes at once; one press = one toggle | ☐ |
+| S6 | Hold OK on a switch | Does not toggle repeatedly | ☐ |
+| S7 | Back from a feedback page / from Feedback Settings | One level up each time | ☐ |
+| S8 | Preview on each page | Plays exactly that event's enabled outputs; nothing if both are OFF | ☐ |
+| S9 | Help / Stealth line | Help page opens; stealth status correct | ☐ |
+
+### Switches (counting from 0 to 3 with target 3)
+
+`CV` = Counter Vibration, `CS` = Counter Sound, `TV` = Target Vibration, `TS` = Target Sound.
+
+| # | CV | CS | TV | TS | Expected on counts 1, 2 | Expected at 3/3 | Result |
+|---|---|---|---|---|---|---|---|
+| S10 | OFF | OFF | ON | ON | silent | long vibration + melody + green LED, once | ☐ |
+| S11 | ON | ON | OFF | OFF | short vibration + click | **silent** (no tick), "Target reached!" shown | ☐ |
+| S12 | ON | OFF | OFF | OFF | short vibration only | silent | ☐ |
+| S13 | OFF | ON | OFF | OFF | click only | silent | ☐ |
+| S14 | OFF | OFF | ON | OFF | silent | long vibration pattern only (+ LED) | ☐ |
+| S15 | OFF | OFF | OFF | ON | silent | melody only (+ LED) | ☐ |
+| S16 | ON | ON | ON | ON | vibration + click | target pattern only, no extra tick | ☐ |
+| S17 | OFF | OFF | OFF | OFF | silent | silent, no LED, banner shown | ☐ |
+| S18 | ON | OFF | OFF | ON | short vibration | melody only | ☐ |
+| S19 | OFF | ON | ON | OFF | click | long vibration only | ☐ |
+
+The remaining 6 of the 16 combinations are covered by the unit tests. Test them on the device
+if time allows.
+
+### Interaction with existing features
+
+| # | Test | Expected | Result |
+|---|---|---|---|
+| S20 | Stealth mode on, any switch ON | "Muted" on the counter screen, no output | ☐ |
+| S21 | Stealth mode on, all switches OFF | No "Muted" hint | ☐ |
+| S22 | System Vibro off, TV+TS ON | Melody only at the target | ☐ |
+| S23 | Undo (hold Down) with all switches ON | Undo works, no feedback sound/vibration | ☐ |
+| S24 | Auto reset, rounds, profile switching (Left/Right) | Unchanged from v1.0.1 | ☐ |
+| S25 | Fast pressing over several rounds with everything ON | UI never freezes | ☐ |
+
+## v1.0.1 – hardware results
+
+The user reported that **all 9 prioritised v1.0.1 hardware tests passed** on Momentum. The
+individual results were not recorded row by row, so the table below stays as the full
+reference checklist. Rows F1.1–F1.5 now refer to the old single Feedback mode, which v1.0.2
+replaced (see S10–S19).
 
 ### Before you start
 - Keep a copy of `SD:/apps_data/flipper_dhikr/settings.txt` from v1.0 (for M1).

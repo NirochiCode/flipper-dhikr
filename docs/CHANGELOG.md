@@ -4,6 +4,36 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] – 2026-11-22
+
+### Added
+- **Independent feedback switches:** `Counter Vibration`, `Counter Sound`,
+  `Target Vibration` and `Target Sound`, each ON/OFF. Any combination works, e.g. silent
+  counting with vibration + sound only at 33/33.
+- Feedback Settings menu: `Counter Feedback >`, `Target Feedback >` (each with Vibration,
+  Sound and Preview; OK toggles), stealth status and Help.
+
+### Changed
+- **Settings format version 3:** four `feedback.*` keys replace `feedback=<mode>`.
+  Migration from v1.0.1 (format 2) and v1.0 (format 1) keeps the old behaviour: Off → all
+  OFF, Vibration → counter + target vibration, Sound → counter + target sound, Both → all ON.
+  Profiles, counts, rounds and targets are unchanged. The original is kept as
+  `settings.v2.bak` / `settings.v1.bak`.
+- New installs default to counter OFF/OFF and target ON/ON.
+- A completed target plays only the target pattern (or nothing if both target switches are
+  off). It never falls back to the counter tick.
+
+### Tests and build
+- 50 host unit tests (previously 43), including all 16 switch combinations, migration from
+  format 1 and 2, and corrupt feedback keys.
+- GCC `-fanalyzer` (27 firmware sources) and clang `--analyze`: no findings.
+- Momentum `mntm-012` (API 87.1) and official `1.5.1` (API 88.2): build without warnings,
+  APPCHK passed. Output in `dist/v1.0.2/`.
+
+### Hardware
+- v1.0.1: the 9 prioritised hardware tests passed on Momentum (reported by the user).
+- v1.0.2: not yet tested on hardware.
+
 ## [1.0.1] – 2026-11-22
 
 Fixes and improvements after the first hardware test on Momentum.
