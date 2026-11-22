@@ -2,12 +2,15 @@
  * @file settings_codec.h
  * @brief Versioned, checksummed text format for DhikrState (hardware independent).
  *
- * Format version 2 (v1.0.1):
+ * Format version 3 (v1.0.2):
  *
  *     FlipperDhikr
- *     version=2
+ *     version=3
  *     active=c1
- *     feedback=1
+ *     feedback.counter_vibration=0
+ *     feedback.counter_sound=0
+ *     feedback.target_vibration=1
+ *     feedback.target_sound=1
  *     next_custom_id=2
  *     custom_profiles=custom,c1
  *     profile.subhanallah.count=12
@@ -31,7 +34,13 @@
  *    compatible within a version). A known key with an invalid value marks
  *    the whole file as corrupt.
  *
- * Version 1 (v1.0) is still read and migrated:
+ * Versions 1 (v1.0) and 2 (v1.0.1) used one `feedback=<mode>` key
+ * (0 Off, 1 Vibration, 2 Sound, 3 Both). It is migrated to the four switches
+ * so the old behaviour is kept: Vibration -> both vibration switches on,
+ * Sound -> both sound switches on, Both -> all on, Off -> all off.
+ *
+ * Version 2 differs from 3 only in the feedback keys. Version 1 (v1.0) is
+ * also migrated:
  *  - the fixed profile "custom" becomes the first custom profile
  *    (its name, count and target are kept);
  *  - counts that ran past the target (v1.0 allowed this) are folded into
@@ -51,7 +60,7 @@ extern "C" {
 
 #define DHIKR_SETTINGS_MAGIC "FlipperDhikr"
 /** Current format version written by this app. */
-#define DHIKR_SETTINGS_VERSION 2UL
+#define DHIKR_SETTINGS_VERSION 3UL
 /** Oldest format version that can still be read (and migrated). */
 #define DHIKR_SETTINGS_VERSION_MIN 1UL
 /** Upper bound for a serialized file; larger files are rejected as corrupt. */

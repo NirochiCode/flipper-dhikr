@@ -61,7 +61,10 @@ size_t dhikr_settings_serialize(const DhikrState* state, char* buffer, size_t ca
     writer_printf(&writer, "%s\n", DHIKR_SETTINGS_MAGIC);
     writer_printf(&writer, "version=%lu\n", (unsigned long)DHIKR_SETTINGS_VERSION);
     writer_printf(&writer, "active=%s\n", active->id);
-    writer_printf(&writer, "feedback=%lu\n", (unsigned long)state->feedback);
+    writer_printf(&writer, "feedback.counter_vibration=%d\n", state->feedback.counter_vibration ? 1 : 0);
+    writer_printf(&writer, "feedback.counter_sound=%d\n", state->feedback.counter_sound ? 1 : 0);
+    writer_printf(&writer, "feedback.target_vibration=%d\n", state->feedback.target_vibration ? 1 : 0);
+    writer_printf(&writer, "feedback.target_sound=%d\n", state->feedback.target_sound ? 1 : 0);
     writer_printf(&writer, "next_custom_id=%lu\n", (unsigned long)state->next_custom_id);
 
     writer_printf(&writer, "custom_profiles=");
@@ -158,6 +161,13 @@ static bool span_parse_hex32(Span span, uint32_t* out) {
         value = (value << 4) | nibble;
     }
     *out = value;
+    return true;
+}
+
+/** Strict boolean: exactly "0" or "1". */
+static bool span_parse_bool(Span span, bool* out) {
+    if(span.len != 1 || (span.ptr[0] != '0' && span.ptr[0] != '1')) return false;
+    *out = span.ptr[0] == '1';
     return true;
 }
 
@@ -362,7 +372,8 @@ static DhikrCodecResult
     // 4. Pass 1: settings and the list of custom profiles.
     Span key, value;
     Span active_id = {NULL, 0};
-    bool has_feedback = false;
+    bool has_feedback = false; // v1/v2: single mode key
+    uint8_t feedback_switches = 0; // v3: bit per switch key seen
     bool has_custom_list = false;
     bool error = false;
 
@@ -370,13 +381,33 @@ static DhikrCodecResult
     while(body_next(&reader, &body, &key, &value, &error)) {
         if(span_equals(key, "active")) {
             active_id = value;
-        } else if(span_equals(key, "feedback")) {
+        } else if(version <= 2 && span_equals(key, "feedback")) {
+            // v1.0 / v1.0.1: one mode for both events -> four switches.
             uint32_t mode;
-            if(!span_parse_u32(value, &mode) || !dhikr_feedback_mode_is_valid(mode)) {
+            if(!span_parse_u32(value, &mode) || !dhikr_feedback_legacy_mode_is_valid(mode)) {
                 return DhikrCodecCorrupt;
             }
-            state->feedback = (DhikrFeedbackMode)mode;
+            dhikr_feedback_settings_from_legacy(&state->feedback, (DhikrFeedbackLegacyMode)mode);
             has_feedback = true;
+        } else if(version >= 3 && span_starts_with(key, "feedback.")) {
+            static const char* const names[] = {
+                "feedback.counter_vibration",
+                "feedback.counter_sound",
+                "feedback.target_vibration",
+                "feedback.target_sound",
+            };
+            bool* const targets[] = {
+                &state->feedback.counter_vibration,
+                &state->feedback.counter_sound,
+                &state->feedback.target_vibration,
+                &state->feedback.target_sound,
+            };
+            for(uint8_t i = 0; i < 4; i++) {
+                if(span_equals(key, names[i])) {
+                    if(!span_parse_bool(value, targets[i])) return DhikrCodecCorrupt;
+                    feedback_switches |= (uint8_t)(1U << i);
+                }
+            }
         } else if(version >= 2 && span_equals(key, "next_custom_id")) {
             uint32_t next;
             if(!span_parse_u32(value, &next) || next == 0 || next > DHIKR_CUSTOM_ID_MAX + 1) {
@@ -388,7 +419,9 @@ static DhikrCodecResult
             has_custom_list = true;
         }
     }
-    if(error || active_id.ptr == NULL || !has_feedback) return DhikrCodecCorrupt;
+    if(error || active_id.ptr == NULL) return DhikrCodecCorrupt;
+    if(version <= 2 && !has_feedback) return DhikrCodecCorrupt;
+    if(version >= 3 && feedback_switches != 0x0F) return DhikrCodecCorrupt; // all four required
     if(version >= 2 && !has_custom_list) return DhikrCodecCorrupt;
     // Version 1: the default state already holds the single "custom" profile.
 

@@ -1,5 +1,6 @@
 #include "include/storage.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "include/settings_codec.h"
@@ -45,9 +46,14 @@ DhikrLoadResult dhikr_store_load(DhikrStore* store, DhikrState* out) {
             // Keep the original file before it is replaced by the new format. If an
             // earlier migration was interrupted, the main file is still the old one,
             // so overwriting the backup with it loses nothing.
-            if(io->write(io->context, DHIKR_SETTINGS_V1_BACKUP_PATH, buffer, length) !=
-               DhikrIoOk) {
-                io->remove(io->context, DHIKR_SETTINGS_V1_BACKUP_PATH);
+            char backup_path[48];
+            snprintf(
+                backup_path,
+                sizeof(backup_path),
+                DHIKR_SETTINGS_DIR "/settings.v%lu.bak",
+                (unsigned long)version);
+            if(io->write(io->context, backup_path, buffer, length) != DhikrIoOk) {
+                io->remove(io->context, backup_path);
             }
             // Not remembered as "on disk": the next save writes the new format.
             result = DhikrLoadMigrated;

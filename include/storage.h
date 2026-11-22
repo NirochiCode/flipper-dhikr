@@ -14,8 +14,9 @@
  *
  * Load policy:
  *  - Valid file           -> use it.
- *  - Older format (v1.0)  -> migrate in memory, keep the original bytes as
- *                            settings.v1.bak, the caller then saves v2.
+ *  - Older format         -> migrate in memory, keep the original bytes as
+ *                            settings.v<N>.bak, the caller then saves the
+ *                            current format.
  *  - Missing file         -> try a leftover temporary file, otherwise defaults.
  *  - Corrupt/unsupported  -> move it to a backup file, use defaults.
  *  - I/O error            -> defaults and saving is disabled for this session
@@ -38,8 +39,9 @@ extern "C" {
 #define DHIKR_SETTINGS_PATH DHIKR_SETTINGS_DIR "/settings.txt"
 #define DHIKR_SETTINGS_TMP_PATH DHIKR_SETTINGS_DIR "/settings.tmp"
 #define DHIKR_SETTINGS_BACKUP_PATH DHIKR_SETTINGS_DIR "/settings.bak"
-/* Copy of a v1.0 file, written once before it is migrated. */
+/* Copy of an older-format file, written before it is migrated (settings.v<N>.bak). */
 #define DHIKR_SETTINGS_V1_BACKUP_PATH DHIKR_SETTINGS_DIR "/settings.v1.bak"
+#define DHIKR_SETTINGS_V2_BACKUP_PATH DHIKR_SETTINGS_DIR "/settings.v2.bak"
 
 typedef enum {
     DhikrIoOk,
