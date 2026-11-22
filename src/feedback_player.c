@@ -86,37 +86,41 @@ static const NotificationSequence sequence_target_both = {
     NULL,
 };
 
-void dhikr_feedback_play(
+bool dhikr_feedback_play(
     NotificationApp* notifications,
-    DhikrFeedbackMode mode,
+    const DhikrFeedbackSettings* settings,
     DhikrFeedbackEvent event) {
-    if(notifications == NULL) return;
+    if(notifications == NULL) return false;
 
-    const DhikrFeedbackPlan plan = dhikr_feedback_plan(mode, event);
+    // NotificationSequence is an array type, so a switch is used instead of a table of ?:
     const NotificationSequence* sequence = NULL;
-
-    // NotificationSequence is an array type, so plain if/else is used instead of ?:
-    if(plan.vibro && plan.sound) {
-        if(plan.distinct) {
-            sequence = &sequence_target_both;
-        } else {
-            sequence = &sequence_count_both;
-        }
-    } else if(plan.vibro) {
-        if(plan.distinct) {
-            sequence = &sequence_target_vibro;
-        } else {
-            sequence = &sequence_count_vibro;
-        }
-    } else if(plan.sound) {
-        if(plan.distinct) {
-            sequence = &sequence_target_sound;
-        } else {
-            sequence = &sequence_count_sound;
-        }
+    switch(dhikr_feedback_select(settings, event)) {
+    case DhikrFeedbackPatternCountVibro:
+        sequence = &sequence_count_vibro;
+        break;
+    case DhikrFeedbackPatternCountSound:
+        sequence = &sequence_count_sound;
+        break;
+    case DhikrFeedbackPatternCountBoth:
+        sequence = &sequence_count_both;
+        break;
+    case DhikrFeedbackPatternTargetVibro:
+        sequence = &sequence_target_vibro;
+        break;
+    case DhikrFeedbackPatternTargetSound:
+        sequence = &sequence_target_sound;
+        break;
+    case DhikrFeedbackPatternTargetBoth:
+        sequence = &sequence_target_both;
+        break;
+    case DhikrFeedbackPatternNone:
+    default:
+        break;
     }
 
-    if(sequence != NULL) notification_message(notifications, sequence);
+    if(sequence == NULL) return false;
+    notification_message(notifications, sequence);
+    return true;
 }
 
 bool dhikr_feedback_system_muted(void) {

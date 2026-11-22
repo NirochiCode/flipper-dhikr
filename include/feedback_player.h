@@ -17,9 +17,13 @@
 
 #include "include/feedback.h"
 
-void dhikr_feedback_play(
+/**
+ * Play the single pattern chosen by dhikr_feedback_select() for this event.
+ * @return true if a sequence was queued (false: all switches for the event are off)
+ */
+bool dhikr_feedback_play(
     NotificationApp* notifications,
-    DhikrFeedbackMode mode,
+    const DhikrFeedbackSettings* settings,
     DhikrFeedbackEvent event);
 
 /**

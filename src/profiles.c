@@ -86,7 +86,7 @@ void dhikr_state_init_defaults(DhikrState* state) {
 
     state->profile_count = DHIKR_BUILTIN_PROFILE_COUNT + 1;
     state->active = 0;
-    state->feedback = DHIKR_FEEDBACK_DEFAULT;
+    dhikr_feedback_settings_init_defaults(&state->feedback);
     state->next_custom_id = 1;
 }
 
@@ -260,7 +260,6 @@ bool dhikr_state_is_valid(const DhikrState* state) {
         return false;
     }
     if(state->active >= state->profile_count) return false;
-    if(!dhikr_feedback_mode_is_valid((uint32_t)state->feedback)) return false;
     if(state->next_custom_id == 0) return false;
 
     for(uint8_t i = 0; i < state->profile_count; i++) {

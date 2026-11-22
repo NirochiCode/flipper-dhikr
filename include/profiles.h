@@ -54,7 +54,8 @@ typedef struct {
     DhikrProfile profiles[DHIKR_PROFILE_MAX];
     uint8_t profile_count;
     uint8_t active;
-    DhikrFeedbackMode feedback;
+    /** Four independent feedback switches (v1.0.2). */
+    DhikrFeedbackSettings feedback;
     /** Number for the next "c<N>" id; never decreases. */
     uint32_t next_custom_id;
 } DhikrState;
