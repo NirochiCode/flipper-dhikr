@@ -1,14 +1,16 @@
 #include "include/feedback_player.h"
 
+#include <furi_hal_rtc.h>
 #include <notification/notification_messages.h>
 
 /*
- * All sequences are short (count: ~50 ms, target: ~0.5 s) and explicitly
- * end with sound/vibration off. The notification service plays them on its
- * own thread, so notification_message() returns immediately.
+ * Durations: count ~50 ms, target ~0.5 s. The target pattern is shorter than
+ * the 1 s "Target reached!" banner, so it has finished before normal
+ * counting resumes and cannot pile up in the notification queue (which is
+ * shared with the input service and blocks the sender when full).
  */
 
-/* --- Count: short, subtle --------------------------------------------------- */
+/* --- Count: short, subtle ---------------------------------------------------- */
 
 static const NotificationSequence sequence_count_vibro = {
     &message_vibro_on,
@@ -34,7 +36,7 @@ static const NotificationSequence sequence_count_both = {
     NULL,
 };
 
-/* --- Target reached: longer, distinct pattern ------------------------------- */
+/* --- Target reached: two long pulses / rising arpeggio, green LED ------------ */
 
 static const NotificationSequence sequence_target_vibro = {
     &message_green_255,
@@ -43,7 +45,8 @@ static const NotificationSequence sequence_target_vibro = {
     &message_vibro_off,
     &message_delay_100,
     &message_vibro_on,
-    &message_delay_250,
+    &message_delay_100,
+    &message_delay_50,
     &message_vibro_off,
     &message_green_0,
     NULL,
@@ -89,36 +92,33 @@ void dhikr_feedback_play(
     DhikrFeedbackEvent event) {
     if(notifications == NULL) return;
 
+    const DhikrFeedbackPlan plan = dhikr_feedback_plan(mode, event);
     const NotificationSequence* sequence = NULL;
-    const bool target = event == DhikrFeedbackEventTarget;
 
     // NotificationSequence is an array type, so plain if/else is used instead of ?:
-    switch(mode) {
-    case DhikrFeedbackVibro:
-        if(target) {
-            sequence = &sequence_target_vibro;
-        } else {
-            sequence = &sequence_count_vibro;
-        }
-        break;
-    case DhikrFeedbackSound:
-        if(target) {
-            sequence = &sequence_target_sound;
-        } else {
-            sequence = &sequence_count_sound;
-        }
-        break;
-    case DhikrFeedbackBoth:
-        if(target) {
+    if(plan.vibro && plan.sound) {
+        if(plan.distinct) {
             sequence = &sequence_target_both;
         } else {
             sequence = &sequence_count_both;
         }
-        break;
-    case DhikrFeedbackOff:
-    default:
-        break;
+    } else if(plan.vibro) {
+        if(plan.distinct) {
+            sequence = &sequence_target_vibro;
+        } else {
+            sequence = &sequence_count_vibro;
+        }
+    } else if(plan.sound) {
+        if(plan.distinct) {
+            sequence = &sequence_target_sound;
+        } else {
+            sequence = &sequence_count_sound;
+        }
     }
 
     if(sequence != NULL) notification_message(notifications, sequence);
+}
+
+bool dhikr_feedback_system_muted(void) {
+    return furi_hal_rtc_is_flag_set(FuriHalRtcFlagStealthMode);
 }

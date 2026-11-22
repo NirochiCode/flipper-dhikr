@@ -28,15 +28,28 @@ typedef enum {
 typedef enum {
     /** Short, subtle feedback for a single count. */
     DhikrFeedbackEventCount,
-    /** Distinct feedback when the target is reached for the first time. */
+    /** Distinct feedback when a round is completed. */
     DhikrFeedbackEventTarget,
 } DhikrFeedbackEvent;
+
+/** What a feedback event should do, before the system settings are applied. */
+typedef struct {
+    bool vibro;
+    bool sound;
+    /** Green LED blink (target only, not for mode Off). */
+    bool led;
+    /** Long, distinct pattern (target) instead of a short tick (count). */
+    bool distinct;
+} DhikrFeedbackPlan;
 
 bool dhikr_feedback_mode_is_valid(uint32_t mode);
 bool dhikr_feedback_mode_uses_vibro(DhikrFeedbackMode mode);
 bool dhikr_feedback_mode_uses_sound(DhikrFeedbackMode mode);
 /** @return short display name, "?" for invalid modes. */
 const char* dhikr_feedback_mode_name(DhikrFeedbackMode mode);
+
+/** Decide which outputs an event uses for a given mode. */
+DhikrFeedbackPlan dhikr_feedback_plan(DhikrFeedbackMode mode, DhikrFeedbackEvent event);
 
 #ifdef __cplusplus
 }

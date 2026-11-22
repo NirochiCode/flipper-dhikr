@@ -4,9 +4,12 @@
  *
  * Sequences are queued to the notification service and played on its own
  * thread, so the UI never blocks. Every sequence ends by switching the
- * speaker/vibration motor off, so nothing keeps running. System-wide
- * notification settings (volume, vibration on/off, stealth mode) are
- * respected because no "force" messages are used.
+ * speaker/vibration motor off, so nothing keeps running.
+ *
+ * System settings are respected on purpose (no "force" messages): the
+ * notification service skips vibration if Settings > Notifications > Vibro
+ * is off, plays sound at the system volume (silent at 0 %) and skips both
+ * while stealth mode is on.
  */
 #pragma once
 
@@ -18,3 +21,10 @@ void dhikr_feedback_play(
     NotificationApp* notifications,
     DhikrFeedbackMode mode,
     DhikrFeedbackEvent event);
+
+/**
+ * @return true if stealth mode is on, which mutes all vibration and sound
+ *         system-wide. (The Vibro switch and the volume cannot be read
+ *         through the public SDK, so they are only mentioned in the help.)
+ */
+bool dhikr_feedback_system_muted(void);

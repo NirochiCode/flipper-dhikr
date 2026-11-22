@@ -23,3 +23,14 @@ const char* dhikr_feedback_mode_name(DhikrFeedbackMode mode) {
     if(!dhikr_feedback_mode_is_valid((uint32_t)mode)) return "?";
     return feedback_mode_names[mode];
 }
+
+DhikrFeedbackPlan dhikr_feedback_plan(DhikrFeedbackMode mode, DhikrFeedbackEvent event) {
+    DhikrFeedbackPlan plan = {0};
+    if(!dhikr_feedback_mode_is_valid((uint32_t)mode)) return plan;
+
+    plan.vibro = dhikr_feedback_mode_uses_vibro(mode);
+    plan.sound = dhikr_feedback_mode_uses_sound(mode);
+    plan.distinct = event == DhikrFeedbackEventTarget && (plan.vibro || plan.sound);
+    plan.led = plan.distinct;
+    return plan;
+}
