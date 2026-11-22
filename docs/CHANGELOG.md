@@ -4,33 +4,86 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] – 2026-11-22
+
+Fixes and improvements after the first hardware test on Momentum.
+
+### Fixed
+- **Target feedback did not play** (vibration/sound when reaching the target).
+  - *Investigation:* the notification usage was checked against the Momentum `mntm-012`
+    sources (`notification_app.c`, `notification_messages*.c`). It uses the correct API, its
+    sequences are well-formed and NULL-terminated, and the relocations in the built FAP
+    resolve to the right firmware symbols. Nothing there explains silence. The service
+    suppresses vibration/sound only through stealth mode, the system Vibro switch or volume
+    0.
+  - *Cause in the app:* the target signal was edge-triggered. It fired only when the count
+    went from below the target to the target, and never while the count was at or above it.
+    That state was easy to get into and never ended without a manual reset: counting on after
+    the target (`Done +N`), lowering the target below the current count, or reopening the app
+    with such a saved state. From then on, no target feedback was possible.
+  - *Fix:* rounds (see below). The counter never stays at or above the target. Every count
+    that reaches it completes a round and plays the target signal, and a count above the
+    target (e.g. after lowering it) completes the round on the next press. Shorter target
+    patterns (~0.5 s) and skipping feedback while a pattern still plays keep the notification
+    queue from filling up and blocking the UI.
+  - *System settings:* the app now detects **stealth mode**. It shows "Muted" on the counter
+    screen, a `Stealth mode` line and a help page in Feedback Settings, and README
+    documentation. System Vibro/Volume cannot be read through the SDK, so they are explained
+    in the help.
+  - *Not yet hardware-verified.*
+- Selecting a profile no longer jumps back to the main menu.
+
+### Added
+- **Rounds with automatic restart:** reaching the target shows "Target reached!" for ~1 s,
+  plays the completion signal once, increments the round counter and resets the count to 0
+  immediately (consistent state even if the app is closed during the message). A press during
+  the message counts as the first of the next round. Completed rounds are shown and stored
+  per profile.
+- **Undo:** hold Down to undo the last count (exactly once per hold, never below 0, active
+  profile only, saved). Undo directly after a completed round restores the previous count
+  and removes the round. Short on-screen messages: "Undo: -1", "Round undone",
+  "Nothing to undo".
+- **Custom profiles:** add (name and target), rename, change the target and delete with a
+  confirmation; up to 16 profiles in total. Unique, stable ids (`c1`, `c2`, … never reused).
+  Duplicate and empty names are rejected. Built-in profiles cannot be renamed or deleted.
+- **Profile list:** OK selects and stays in the list (`*` marks the active profile, saved
+  immediately), hold OK opens the edit menu, plus `+ Add Profile` and `Edit Profiles...`.
+- Feedback Settings: stealth mode status and a "No feedback? Help" page.
+- Reset now also clears the completed rounds of the active profile.
+
+### Changed
+- **Settings format version 2** with a `custom_profiles` list, `next_custom_id` and
+  per-profile `rounds`. **Migration from v1.0:** all counts, targets, names, the active
+  profile and the feedback mode are kept. The v1.0 "Custom Dhikr" becomes a normal custom
+  profile, and counts beyond the target are folded into rounds without loss
+  (`39/33` → `6/33`, 1 round). The original file is kept as `settings.v1.bak`.
+- Removed the `Done +N` display.
+- Immediate saves (completed round, undo) are rate-limited to one per 3 s; the 15 s autosave
+  and the save on exit remain.
+- Stack size 4 → 6 KiB. Build output per app version: `dist/v<version>/<sdk>/`.
+
+### Tests and checks
+- 43 host unit tests (previously 28), including migration, interrupted saves, profile
+  management, undo, auto restart and feedback modes. The checks were also run with
+  intentionally broken code to make sure they detect failures.
+- GCC `-fanalyzer` over all firmware sources and clang `--analyze` over the logic: no
+  findings.
+
+### Build
+- Momentum `mntm-012`, API 87.1: builds, passes APPCHK.
+- Official `1.5.1`, API 88.2: builds, passes APPCHK.
+
 ## [1.0.0] – 2026-11-22
 
 First version.
 
 ### Added
-- Tasbih counter screen: profile name, large count, target, progress bar with percentage or
-  "Target reached!" / "Done +N", and a "+1" button hint.
+- Tasbih counter screen with profile name, large count, target and progress bar.
 - OK counts on short press only; Left/Right switch profiles from the counter screen.
-- Count saturates at 999,999 (no overflow).
-- Targets: 33, 99 or a custom value 1–9999 (NumberInput), separate for each profile. The count
-  is never cleared by a target change.
-- Four built-in profiles (SubhanAllah, Alhamdulillah, Allahu Akbar, Custom Dhikr) with
-  independent counts and targets; the custom profile can be renamed (TextInput, max 16 chars).
-- Reset dialog `Reset counter? [No] [Yes]` with No pre-selected; Back cancels; only the
-  active profile is reset and the result is saved immediately.
-- Feedback modes Off / Vibration / Sound / Both, with previews. A distinct target pattern
-  plays once when the target is first reached.
-- Persistent storage in `apps_data/flipper_dhikr/settings.txt`: versioned text format,
-  CRC-32, atomic temp-file + rename, write skipped if unchanged, 15 s autosave while
-  counting, backup of damaged or newer files, read-only protection after read errors.
-- Startup notice when saved data could not be used.
-- Host unit test suite (28 tests, ASan/UBSan).
-- `scripts/build.sh` for labelled builds against Momentum and official SDKs.
-
-### Build
-- Momentum `mntm-012`, API 87.1: builds, passes APPCHK.
-- Official firmware `1.5.1`, API 88.2: builds, passes APPCHK.
-
-### Known issues
-- Not yet tested on physical hardware.
+- Targets 33, 99 or custom 1–9999 per profile; four built-in profiles with independent
+  counts; the custom profile can be renamed.
+- Reset dialog with No pre-selected.
+- Feedback modes Off / Vibration / Sound / Both.
+- Persistent storage (versioned text format, CRC-32, atomic temp-file + rename, write
+  skipped if unchanged, backup of damaged files, read-only protection after read errors).
+- 28 host unit tests; `scripts/build.sh`.

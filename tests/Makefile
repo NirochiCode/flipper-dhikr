@@ -15,7 +15,8 @@ SOURCES := test_main.c \
            $(ROOT)/src/confirm.c \
            $(ROOT)/src/feedback.c \
            $(ROOT)/src/settings_codec.c \
-           $(ROOT)/src/storage.c
+           $(ROOT)/src/storage.c \
+           $(ROOT)/src/counter_input.c
 
 .PHONY: test clean
 test: $(BUILD)/dhikr_tests

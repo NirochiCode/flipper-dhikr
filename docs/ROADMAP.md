@@ -4,26 +4,29 @@ Versions and scope are a plan, not a promise. Religious content (adhkar, duas, r
 counts) will only be added with a cited, verifiable source and should be reviewed by
 knowledgeable people before release.
 
-## v1.0 – Tasbih counter (current)
-- Counter with targets 33 / 99 / custom (1–9999)
-- Four profiles with independent counts. The custom profile can be renamed.
-- Reset with confirmation
+## v1.0 – Tasbih counter ✅
+- Counter with targets 33 / 99 / custom (1–9999), four profiles, reset with confirmation
 - Feedback: Off / Vibration / Sound / Both
 - Persistent, versioned storage on the SD card
 
+## v1.0.1 – Hardware feedback and usability ✅ (hardware test pending)
+- Rounds: automatic restart at the target, completed rounds per profile
+- Undo (hold Down), including taking back a just-completed round
+- Custom profiles: add, rename, set target, delete (max. 16 profiles)
+- Profile list stays open on selection; hold OK to edit
+- Stealth-mode detection and feedback help
+- Settings format v2 with migration from v1.0
+
 ## v1.1 – Quality of life
-- Hardware test pass and UI fixes based on it, real screenshots
-- Undo the last count (e.g. long-press Down) and a decrement option
-- Optional "rounds" mode: restart automatically after the target and count completed rounds
+- Hardware test pass for v1.0.1 and UI polish, real screenshots
 - Optional "keep backlight on" while counting
+- Optional per-profile feedback override
+- Reorder custom profiles
 - Show storage errors directly on the counter screen
+- Optional: keep the undo history across app restarts
 
-## v1.2 – Custom profiles
-- Create, rename, reorder and delete user profiles (up to `DHIKR_PROFILE_MAX`)
-- Per-profile feedback override
-
-## v1.3 – Statistics
-- Daily totals and streaks (needs the RTC). Append-only log or daily buckets on the SD card.
+## v1.2 – Statistics
+- Daily totals and streaks (needs the RTC), stored as daily buckets on the SD card
 - Simple charts on the 128×64 display
 
 ## v2.0 – Content

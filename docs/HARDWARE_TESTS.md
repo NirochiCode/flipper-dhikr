@@ -1,35 +1,112 @@
 # Hardware test checklist
 
-**Status: not yet run.** No Flipper Zero was connected during v1.0 development, so everything
-below is still open. The host unit tests (`make -C tests`) cover the logic but not the display,
-buttons, vibration motor, speaker or SD card.
-
 Install the build that matches your firmware (see README), then work through the list. Record
 the firmware version, the results and any screenshots (qFlipper → screen streaming →
 screenshot) in this file.
 
+## v1.0 – results reported by the user (Momentum)
+
+| # | Test | Result |
+|---|---|---|
+| — | App starts without crashing | ✅ |
+| — | OK increases the counter by exactly 1 | ✅ |
+| — | Targets 33 and 99, custom target | ✅ |
+| — | The four profiles are selectable and keep their own counts | ✅ |
+| — | Reset confirmation | ✅ |
+| — | Settings and counts survive a restart | ✅ |
+| — | UI and navigation readable | ✅ |
+| — | Vibration and sound at the target | ❌ → addressed in v1.0.1 (F1) |
+
+## v1.0.1 – still to be tested on hardware
+
+**Status: not yet run.** No Flipper Zero was connected while v1.0.1 was developed. The
+43 host unit tests cover the logic but not the display, buttons, motor, speaker or SD card.
+
+### Before you start
+- Keep a copy of `SD:/apps_data/flipper_dhikr/settings.txt` from v1.0 (for M1).
+- Settings → Notifications: Vibro **on**, Volume > 0. Stealth mode **off**.
+
+### F1 – Feedback
+
 | # | Test | Expected | Result |
 |---|---|---|---|
-| H1 | Fresh install, open app | Main menu appears; `apps_data/flipper_dhikr/settings.txt` is created | ☐ |
-| H2 | Start Counting, press OK once | Count 0 → 1, short feedback for the selected mode | ☐ |
-| H3 | Hold OK for 2 s | No count (long press ignored) | ☐ |
-| H4 | Press OK rapidly 20× | Exactly +20, UI stays responsive | ☐ |
-| H5 | Reach target 33 | Distinct target pattern + green LED **once**; bar shows "Target reached!" | ☐ |
-| H6 | Keep counting past the target | Normal ticks only; bar shows "Done +N" | ☐ |
-| H7 | Left/Right on counter | Profile changes, each keeps its own count | ☐ |
-| H8 | Target Settings → 99 / Custom 250 | Target changes, count unchanged | ☐ |
-| H9 | Custom target input: 0 and 10000 | Not accepted | ☐ |
-| H10 | Reset Counter → OK immediately | "No" is pre-selected → nothing reset | ☐ |
-| H11 | Reset Counter → Right → Back | Cancelled, nothing reset | ☐ |
-| H12 | Reset Counter → Right → OK | Only the active profile reset to 0 | ☐ |
-| H13 | Rename "Custom Dhikr" | New name shown in profiles and counter; survives restart | ☐ |
-| H14 | Feedback: each mode + previews | Off silent; Vibration only motor; Sound only speaker; Both both | ☐ |
-| H15 | System vibration off / volume 0 / stealth | Feedback follows system settings | ☐ |
-| H16 | Count, Back to menu, exit, reopen | All counts, targets, active profile and feedback restored | ☐ |
-| H17 | Count, wait 20 s without leaving counter, pull battery/reset | Counts up to the last autosave restored | ☐ |
-| H18 | Corrupt `settings.txt` with a text editor, reopen | Notice shown, defaults loaded, `settings.bak` exists | ☐ |
-| H19 | Long custom name (16 chars), count 999999, target 9999 | Everything fits on screen | ☐ |
-| H20 | Exit app via Back from main menu | App closes cleanly, no crash/log errors | ☐ |
-| H21 | Memory check: open/close app 10× | Free heap (Settings → System / `free` in CLI) returns to the same value | ☐ |
+| F1.1 | Feedback = Vibration, count from 0 to target 33 | Short tick on each count; at 33 two long pulses + green LED | ☐ |
+| F1.2 | Feedback = Sound, same | Short click; at the target a rising 4-note melody + green LED | ☐ |
+| F1.3 | Feedback = Both, same | Both | ☐ |
+| F1.4 | Feedback = Off, same | No vibration, no sound, no LED; banner still shows | ☐ |
+| F1.5 | Feedback Settings → Preview count / Preview target | As above for the selected mode | ☐ |
+| F1.6 | Turn stealth mode on, open the counter | "Muted" at bottom right; Feedback Settings shows `Stealth mode: ON (muted)`; no vibration or sound | ☐ |
+| F1.7 | System Vibro off (stealth off), mode Both | Sound only | ☐ |
+| F1.8 | System volume 0 %, mode Both | Vibration only | ☐ |
+| F1.9 | Press OK fast (about 5/s) over several rounds | UI never freezes; each round shows the banner | ☐ |
+
+### F2 – Undo
+
+| # | Test | Expected | Result |
+|---|---|---|---|
+| F2.1 | Count to 10, hold Down | 9, "Undo: -1" | ☐ |
+| F2.2 | Hold Down for 3 s | Undo exactly **once** | ☐ |
+| F2.3 | At 0 (nothing completed), hold Down | Stays 0, "Nothing to undo" | ☐ |
+| F2.4 | Complete a round (33), then hold Down right away | 32/33, "Round undone", rounds −1 | ☐ |
+| F2.5 | Short press Down | Nothing happens | ☐ |
+| F2.6 | Undo, then Back, exit and reopen | Undone value is restored | ☐ |
+| F2.7 | Left/Right/Back still work as before | ✓ | ☐ |
+
+### F3 – Rounds / automatic restart
+
+| # | Test | Expected | Result |
+|---|---|---|---|
+| F3.1 | Target 33: 31 → OK → 32 → OK | Shows `33/33 Target reached!` for ~1 s, feedback once, then `0/33 Rounds: 1` | ☐ |
+| F3.2 | Next OK | 1/33 | ☐ |
+| F3.3 | Target 99 | Same behaviour at 99 | ☐ |
+| F3.4 | Target 1 | Every press completes a round, banner each time | ☐ |
+| F3.5 | Press OK during the banner | Counts as 1 in the new round, banner closes | ☐ |
+| F3.6 | Complete a round, immediately press Back and exit, reopen | Count 0, rounds +1 | ☐ |
+| F3.7 | Other profiles after a round | Unchanged | ☐ |
+| F3.8 | Lower the target below the current count, press OK | Round completes, count 0 | ☐ |
+| F3.9 | No `Done +N` anywhere | ✓ | ☐ |
+
+### F4 – Custom profiles
+
+| # | Test | Expected | Result |
+|---|---|---|---|
+| F4.1 | Profiles → + Add Profile, name "Istighfar", target 100 | Appears in the list, marked `*`, target 100 | ☐ |
+| F4.2 | Add "Salawat" and "Morning Dhikr" | All independent, counts stay separate | ☐ |
+| F4.3 | Add a duplicate ("salawat") | Keyboard shows "Name already exists" | ☐ |
+| F4.4 | Empty name / only spaces | Not accepted | ☐ |
+| F4.5 | Hold OK on a custom profile → Rename | New name everywhere, count kept | ☐ |
+| F4.6 | Hold OK → Target | Target changes, count kept | ☐ |
+| F4.7 | Hold OK → Delete → OK on "No" | Nothing deleted | ☐ |
+| F4.8 | Hold OK → Delete → Right → OK | Deleted, back in the list | ☐ |
+| F4.9 | Hold OK on SubhanAllah | Only "Target" offered (no Rename/Delete) | ☐ |
+| F4.10 | Edit Profiles... → same actions | Same as hold OK | ☐ |
+| F4.11 | Add until 16 profiles, then + Add Profile | "Profile limit" notice | ☐ |
+| F4.12 | 16-character name on the counter screen | Readable (smaller font if needed) | ☐ |
+| F4.13 | Exit and reopen | All profiles, names, targets, counts, rounds restored | ☐ |
+
+### F5 – Profile selection
+
+| # | Test | Expected | Result |
+|---|---|---|---|
+| F5.1 | Profiles → OK on another profile | `*` moves at once, list **stays open** | ☐ |
+| F5.2 | Back | Main menu | ☐ |
+| F5.3 | Start Counting | Selected profile is active | ☐ |
+| F5.4 | Exit right after selecting, reopen | Selection was saved | ☐ |
+
+### M – Migration and storage
+
+| # | Test | Expected | Result |
+|---|---|---|---|
+| M1 | Install v1.0.1 over v1.0 with existing data | All counts/targets/names/active profile/feedback kept; counts past target became rounds; `settings.v1.bak` exists; `settings.txt` has `version=2` | ☐ |
+| M2 | Corrupt `settings.txt` by hand | "Storage notice", defaults, `settings.bak` | ☐ |
+| M3 | Remove the SD card while the app runs, then count and exit | No crash | ☐ |
+
+### General
+
+| # | Test | Expected | Result |
+|---|---|---|---|
+| G1 | All main menu entries open and Back returns | ✓ | ☐ |
+| G2 | Open/close the app 10×, compare free heap (`free` in CLI) | Same value (no leak) | ☐ |
+| G3 | Official firmware 1.5.x with the official build | Starts and works | ☐ |
 
 Firmware tested: _______  Date: _______

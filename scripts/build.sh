@@ -7,7 +7,9 @@
 #
 # Each SDK is downloaded once into a project-local UFBT_HOME (.ufbt-<name>/),
 # so the global ~/.ufbt is never modified. Results:
-#   dist/<name>-<sdk version>/flipper_dhikr.fap
+#   dist/v<app version>/<name>-<sdk version>/flipper_dhikr.fap
+# (app version = DHIKR_APP_VERSION in include/dhikr_app.h), so builds of
+# different app versions never overwrite each other.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -22,6 +24,9 @@ else
     echo "  python3 -m venv .venv && .venv/bin/pip install ufbt" >&2
     exit 1
 fi
+
+APP_VERSION="$(sed -n 's/^#define DHIKR_APP_VERSION *"\(.*\)"/\1/p' "$ROOT/include/dhikr_app.h")"
+[[ -n "$APP_VERSION" ]] || { echo "Cannot read DHIKR_APP_VERSION" >&2; exit 1; }
 
 MOMENTUM_INDEX="https://up.momentum-fw.dev/firmware/directory.json"
 
@@ -46,10 +51,10 @@ build_one() {
     echo "==> Building against $name $version (API $api)"
     UFBT_HOME="$home" "$UFBT"
 
-    local out="$ROOT/dist/$name-$version"
+    local out="$ROOT/dist/v$APP_VERSION/$name-$version"
     mkdir -p "$out"
     mv "$ROOT/dist/flipper_dhikr.fap" "$out/flipper_dhikr.fap"
-    printf 'sdk=%s\nversion=%s\napi=%s\nbuilt=%s\n' "$name" "$version" "$api" \
+    printf 'app_version=%s\nsdk=%s\nversion=%s\napi=%s\nbuilt=%s\n' "$APP_VERSION" "$name" "$version" "$api" \
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$out/BUILD_INFO.txt"
     echo "==> $out/flipper_dhikr.fap"
 }
