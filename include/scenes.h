@@ -20,6 +20,7 @@
     X(Target, target)                  \
     X(TargetCustom, target_custom)     \
     X(Feedback, feedback)              \
+    X(FeedbackEvent, feedback_event)   \
     X(Reset, reset)                    \
     X(About, about)                    \
     X(Notice, notice)

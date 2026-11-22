@@ -23,7 +23,7 @@
 #include "include/ui.h"
 
 #define DHIKR_APP_NAME    "Flipper Dhikr"
-#define DHIKR_APP_VERSION "1.0.1"
+#define DHIKR_APP_VERSION "1.0.2"
 
 /** Unsaved counts are written at most this long after the first change. */
 #define DHIKR_AUTOSAVE_INTERVAL_MS 15000
@@ -115,6 +115,9 @@ typedef struct {
     char pending_name[DHIKR_PROFILE_NAME_SIZE];
     char header[DHIKR_LABEL_SIZE];
     char labels[DHIKR_PROFILE_MAX + 4][DHIKR_LABEL_SIZE];
+
+    /** Which switches the FeedbackEvent screen edits (count or target). */
+    DhikrFeedbackEvent feedback_edit_event;
 
     /* Text for the generic notice screen (string literals). */
     const char* notice_title;

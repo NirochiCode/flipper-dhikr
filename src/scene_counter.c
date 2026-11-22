@@ -7,7 +7,8 @@ static void counter_view_callback(DhikrCounterAction action, void* context) {
 }
 
 static void counter_scene_refresh(DhikrApp* app) {
-    const bool muted = app->state.feedback != DhikrFeedbackOff && dhikr_feedback_system_muted();
+    const bool muted = dhikr_feedback_any_enabled(&app->state.feedback) &&
+                       dhikr_feedback_system_muted();
     dhikr_counter_view_update(
         app->counter_view,
         dhikr_state_active(&app->state),
@@ -41,9 +42,12 @@ bool dhikr_scene_counter_on_event(void* context, SceneManagerEvent event) {
     // the notification queue is shared with the input service and blocks the sender
     // when full. Counts are never skipped, and the banner is always shown.
     const bool feedback_busy = (int32_t)(now - app->target_feedback_until_ms) < 0;
+    // Exactly one pattern per action: a completed target plays only the target pattern
+    // (or nothing if both target switches are off), never the counter pattern as well.
     if(outcome.play_feedback && !feedback_busy) {
-        dhikr_feedback_play(app->notifications, app->state.feedback, outcome.feedback_event);
-        if(outcome.feedback_event == DhikrFeedbackEventTarget) {
+        bool played =
+            dhikr_feedback_play(app->notifications, &app->state.feedback, outcome.feedback_event);
+        if(played && outcome.feedback_event == DhikrFeedbackEventTarget) {
             app->target_feedback_until_ms = now + DHIKR_TARGET_FEEDBACK_MS;
         }
     }
