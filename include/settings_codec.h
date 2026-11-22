@@ -2,25 +2,41 @@
  * @file settings_codec.h
  * @brief Versioned, checksummed text format for DhikrState (hardware independent).
  *
- * Example (version 1):
+ * Format version 2 (v1.0.1):
  *
  *     FlipperDhikr
- *     version=1
- *     active=subhanallah
+ *     version=2
+ *     active=c1
  *     feedback=1
+ *     next_custom_id=2
+ *     custom_profiles=custom,c1
  *     profile.subhanallah.count=12
  *     profile.subhanallah.target=33
+ *     profile.subhanallah.rounds=4
  *     ...
- *     profile.custom.name=Custom Dhikr
+ *     profile.c1.name=Istighfar
+ *     profile.c1.count=0
+ *     profile.c1.target=100
+ *     profile.c1.rounds=0
  *     crc32=1A2B3C4D
  *
  * Rules:
  *  - Line 1 is the magic string, line 2 the format version.
  *  - The last line is a CRC-32 (IEEE) over every byte before that line.
- *  - Unknown keys and unknown profile ids are ignored (forward compatible
- *    within the same version); a known key with an invalid value marks the
- *    whole file as corrupt.
- *  - Built-in profiles missing from the file keep their defaults.
+ *  - Built-in profiles always exist, are always listed first and keep their
+ *    defaults if their keys are missing.
+ *  - `custom_profiles` lists the custom profile ids in display order. Each
+ *    listed profile needs a valid name, count and target.
+ *  - Unknown keys and keys of unknown profiles are ignored (forward
+ *    compatible within a version). A known key with an invalid value marks
+ *    the whole file as corrupt.
+ *
+ * Version 1 (v1.0) is still read and migrated:
+ *  - the fixed profile "custom" becomes the first custom profile
+ *    (its name, count and target are kept);
+ *  - counts that ran past the target (v1.0 allowed this) are folded into
+ *    rounds without losing anything: rounds = count / target,
+ *    count = count % target.
  */
 #pragma once
 
@@ -34,9 +50,12 @@ extern "C" {
 #endif
 
 #define DHIKR_SETTINGS_MAGIC "FlipperDhikr"
-#define DHIKR_SETTINGS_VERSION 1UL
+/** Current format version written by this app. */
+#define DHIKR_SETTINGS_VERSION 2UL
+/** Oldest format version that can still be read (and migrated). */
+#define DHIKR_SETTINGS_VERSION_MIN 1UL
 /** Upper bound for a serialized file; larger files are rejected as corrupt. */
-#define DHIKR_SETTINGS_BUFFER_SIZE 2048
+#define DHIKR_SETTINGS_BUFFER_SIZE 4096
 
 typedef enum {
     DhikrCodecOk,
@@ -47,17 +66,24 @@ typedef enum {
 } DhikrCodecResult;
 
 /**
- * Serialize `state` into `buffer` (NUL terminated).
+ * Serialize `state` into `buffer` (NUL terminated) using the current version.
  * @return number of bytes written (without NUL), or 0 if the state is
  *         invalid or the buffer is too small.
  */
 size_t dhikr_settings_serialize(const DhikrState* state, char* buffer, size_t capacity);
 
 /**
- * Parse `length` bytes of `data`. On success `out` receives the loaded
- * state; on any failure `out` receives the default state.
+ * Parse `length` bytes of `data` (any supported version). On success `out`
+ * receives the loaded (and, for older versions, migrated) state; on any
+ * failure `out` receives the default state.
+ * @param[out] source_version format version found in the file (may be NULL;
+ *             0 if it could not be determined)
  */
-DhikrCodecResult dhikr_settings_parse(const char* data, size_t length, DhikrState* out);
+DhikrCodecResult dhikr_settings_parse(
+    const char* data,
+    size_t length,
+    DhikrState* out,
+    uint32_t* source_version);
 
 /** CRC-32 (IEEE 802.3, reflected, poly 0xEDB88320). */
 uint32_t dhikr_crc32(const void* data, size_t length);

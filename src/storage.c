@@ -39,8 +39,19 @@ DhikrLoadResult dhikr_store_load(DhikrStore* store, DhikrState* out) {
         io->read(io->context, DHIKR_SETTINGS_PATH, buffer, DHIKR_SETTINGS_BUFFER_SIZE, &length);
 
     if(status == DhikrIoOk) {
-        DhikrCodecResult codec = dhikr_settings_parse(buffer, length, out);
-        if(codec == DhikrCodecOk) {
+        uint32_t version = 0;
+        DhikrCodecResult codec = dhikr_settings_parse(buffer, length, out, &version);
+        if(codec == DhikrCodecOk && version < DHIKR_SETTINGS_VERSION) {
+            // Keep the original file before it is replaced by the new format. If an
+            // earlier migration was interrupted, the main file is still the old one,
+            // so overwriting the backup with it loses nothing.
+            if(io->write(io->context, DHIKR_SETTINGS_V1_BACKUP_PATH, buffer, length) !=
+               DhikrIoOk) {
+                io->remove(io->context, DHIKR_SETTINGS_V1_BACKUP_PATH);
+            }
+            // Not remembered as "on disk": the next save writes the new format.
+            result = DhikrLoadMigrated;
+        } else if(codec == DhikrCodecOk) {
             store_remember(store, out, buffer);
             // A leftover temp file is stale once the main file is valid.
             io->remove(io->context, DHIKR_SETTINGS_TMP_PATH);
@@ -61,7 +72,9 @@ DhikrLoadResult dhikr_store_load(DhikrStore* store, DhikrState* out) {
         result = DhikrLoadMissing;
         if(io->read(io->context, DHIKR_SETTINGS_TMP_PATH, buffer, DHIKR_SETTINGS_BUFFER_SIZE, &length) ==
            DhikrIoOk) {
-            if(dhikr_settings_parse(buffer, length, out) == DhikrCodecOk &&
+            uint32_t version = 0;
+            if(dhikr_settings_parse(buffer, length, out, &version) == DhikrCodecOk &&
+               version == DHIKR_SETTINGS_VERSION &&
                io->rename(io->context, DHIKR_SETTINGS_TMP_PATH, DHIKR_SETTINGS_PATH) == DhikrIoOk) {
                 store_remember(store, out, buffer);
                 result = DhikrLoadRecovered;
