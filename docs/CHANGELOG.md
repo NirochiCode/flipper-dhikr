@@ -4,6 +4,45 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.3] – 2026-11-23
+
+Menu and wording only. No new features, same settings format.
+
+### Changed
+- **Main menu:** `Target Settings` removed. The menu is now `Start Counting`,
+  `Dhikr Profiles`, `Feedback Settings`, `Reset Counter`, `About`. Every profile already has
+  its own target, and the old entry only ever changed the active profile.
+- **Profile edit menu** (hold OK on a profile, or `Edit Profiles...`): `Edit Target (N)`,
+  `Rename Profile`, `Delete Profile`. Built-in profiles still only offer `Edit Target`.
+- **Edit Target** opens the familiar 33 / 99 / custom choice for exactly the profile being
+  edited. The value is saved at once and the app returns to that profile's edit menu
+  (previously the custom value returned to the profile list or the main menu). The active
+  profile, the count and the completed sets are not changed.
+- **"Sets" instead of "Rounds"** on screen: the counter shows `Sets: N` (also `Sets: 0`), the
+  target message reads `Set N complete!` (previously `Target reached!`), undo of a completed
+  set shows `Set undone`, and the reset/delete dialogs and the About page use "sets".
+- About page: short explanation of sets and of hold OK to edit profiles. Version 1.0.3
+  (`fap_version` stays `1.0`, the manifest only supports major.minor).
+
+### Unchanged
+- Settings format v3: completed sets are still stored as `profile.<id>.rounds`. A file
+  written by v1.0.2 is read as-is and written back byte-identical (tested). No migration,
+  no new backup file.
+- Counting, automatic restart, undo, the four feedback switches, stealth handling, profile
+  limits and all confirmations.
+
+### Tests and build
+- 62 host unit tests (previously 50). New: U1–U12 for the main menu, Edit Target per
+  profile, editing an inactive profile, built-in protection, sets persistence, the set
+  banner with undo, target changes keeping counts and sets, v1.0.2 file compatibility and
+  all 16 feedback combinations.
+- GCC `-fanalyzer` (28 firmware sources) and clang `--analyze` (logic): no findings.
+- Momentum `mntm-012` (API 87.1) and official `1.5.1` (API 88.2): build without warnings,
+  APPCHK passed. Output in `dist/v1.0.3/`.
+
+### Hardware
+- **v1.0.3 is not yet validated on hardware.**
+
 ## [1.0.2] – 2026-11-22
 
 ### Added

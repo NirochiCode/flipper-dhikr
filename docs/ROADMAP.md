@@ -9,7 +9,7 @@ knowledgeable people before release.
 - Feedback: Off / Vibration / Sound / Both
 - Persistent, versioned storage on the SD card
 
-## v1.0.1 – Hardware feedback and usability ✅ (hardware test pending)
+## v1.0.1 – Hardware feedback and usability ✅
 - Rounds: automatic restart at the target, completed rounds per profile
 - Undo (hold Down), including taking back a just-completed round
 - Custom profiles: add, rename, set target, delete (max. 16 profiles)
@@ -17,8 +17,18 @@ knowledgeable people before release.
 - Stealth-mode detection and feedback help
 - Settings format v2 with migration from v1.0
 
+## v1.0.2 – Independent feedback switches ✅ (hardware validated, Momentum)
+- Counter and target vibration/sound as four independent switches
+- Settings format v3 with migration from v1/v2
+
+## v1.0.3 – Menu and UX (hardware test pending)
+- Main menu without `Target Settings`; targets are edited per profile (Edit Target)
+- Clearer profile edit menu: Edit Target (N), Rename Profile, Delete Profile
+- "Sets" instead of "Rounds", `Set N complete!` at the target
+- Screenshot checklist; real screenshots after the hardware test
+
 ## v1.1 – Quality of life
-- Hardware test pass for v1.0.1 and UI polish, real screenshots
+- Real screenshots and the remaining extended hardware checklist
 - Optional "keep backlight on" while counting
 - Optional per-profile feedback override
 - Reorder custom profiles

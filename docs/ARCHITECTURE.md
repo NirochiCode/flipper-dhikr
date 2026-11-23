@@ -30,7 +30,8 @@ tested on the host. Code that talks to the SDK is a thin layer around it.
 |---|---|
 | `counter` | `DhikrCounter {count, target, rounds}` plus the undo information that is not saved. Increment completes a round at the target; undo; reset; normalisation of v1.0 counts. |
 | `counter_input` | Maps keys to actions (`OK short` → +1, `Down long` → undo, `Left/Right short` → profile). Banner timing. `dhikr_counter_apply()` applies an action to the state and returns which feedback to play and whether to save. The counter scene is only a thin wrapper around it. |
-| `profiles` | `DhikrProfile` (stable `id`, name, counter, `builtin`) and `DhikrState` (≤ 16 profiles, active index, four feedback switches, `next_custom_id`). Add, rename, delete, name check (valid and unique), list labels. |
+| `profiles` | `DhikrProfile` (stable `id`, name, counter, `builtin`) and `DhikrState` (≤ 16 profiles, active index, four feedback switches, `next_custom_id`). Add, rename, delete, `dhikr_state_set_target(state, index, target)` (any profile, active unchanged), name check (valid and unique), list labels. |
+| `menu` | Main menu entries and labels; which edit actions a profile allows (built-ins: Edit Target only) and their labels. Pure, so the menu structure is unit-tested. |
 | `confirm` | [No]/[Yes] state machine used by reset and delete. Starts at **No**. |
 | `settings_codec` | Serialises format v3 and parses v1, v2 and v3 (with migration). CRC-32. |
 | `storage` | Load/save policy on top of `DhikrFileIo`: atomic writes, skipping unchanged writes, backups, migration hand-off. |
@@ -49,10 +50,10 @@ MainMenu ─┬─ Counter                         (OK +1, hold Down undo, Left/
           │            ├─ + Add ─ ProfileName ─ TargetCustom(new) ─► back to Profiles
           │            └─ Edit Profiles... ─ ProfileEdit ─┐
           │                                               ▼
-          │                         ProfileActions ─┬─ TargetCustom(edit)
+          │                         ProfileActions ─┬─ Target (33 / 99 / Custom...) ─► ProfileActions
+          │                         (edit_profile)  │     └─ TargetCustom(edit) ─► ProfileActions
           │                                         ├─ ProfileName(rename)
           │                                         └─ ProfileDelete (confirm) ─► back to list
-          ├─ Target ─ TargetCustom(active) ─► MainMenu
           ├─ Feedback ─┬─ FeedbackEvent(count)   (Vibration / Sound / Preview)
           │            ├─ FeedbackEvent(target)
           │            └─ Notice(help)
@@ -65,7 +66,20 @@ The shared input screens (`ProfileName`, `TargetCustom`) take their purpose from
 `app->name_mode` and `app->target_mode`, so one scene serves several flows without duplicated
 code.
 
+Since v1.0.3 the main menu has no `Target Settings` entry. The `Target` scene (presets) is
+reached only from `ProfileActions` and always edits `app->edit_profile`, the profile that was
+explicitly chosen in the list, never implicitly the active one. Choosing a value saves at once
+and returns to `ProfileActions`, whose `Edit Target (N)` label shows the new value.
+
 ## Key decisions
+
+### "Sets" in the UI, `rounds` in the data (v1.0.3)
+The UI calls a completed pass a **set** (`Sets: N`, `Set N complete!`, `Set undone`). The
+counter field, the settings key `profile.<id>.rounds` and format v3 are unchanged, so no
+migration is needed and v1.0.2 files load byte-for-byte. `DhikrBanner.set_number` carries the
+number of the set just completed, so the banner does not depend on later state changes.
+Sets are a plain tally per profile; they are never multiplied by the target, so a later target
+change does not alter their meaning.
 
 ### Rounds instead of counting past the target (v1.0.1)
 The increment that reaches the target (`count + 1 >= target`) sets `count = 0` and
@@ -196,12 +210,14 @@ crc32=1A2B3C4D
 
 ## Testing and checks
 
-- `tests/test_main.c`: 50 tests (including all 16 feedback switch combinations, each with a
-  simulated round and a save/reload) against the pure modules with an in-memory fake
+- `tests/test_main.c`: 62 tests (including all 16 feedback switch combinations, each with a
+  simulated round and a save/reload, and the v1.0.3 menu/UX tests U1–U12) against the pure modules with an in-memory fake
   `DhikrFileIo`, built with `-Wall -Wextra -Werror -Wconversion` and ASan/UBSan.
-  Requirements R1–R20 are marked in the source.
+  Requirements R1–R20, F1–F13 and U1–U12 are marked in the source.
 - The tests were checked with intentionally broken code: breaking undo or rounds makes the
-  related tests fail.
+  related tests fail. For v1.0.3: making a target edit activate the profile, putting
+  `Target Settings` back in the main menu, allowing Rename on built-ins and dropping the set
+  number from the banner each make the matching tests fail.
 - GCC `-fanalyzer` was run over every firmware source with the real uFBT compile flags, and
   clang `--analyze` over the logic modules: no findings.
 - Hardware behaviour: `docs/HARDWARE_TESTS.md`.

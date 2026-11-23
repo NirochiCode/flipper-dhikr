@@ -1,8 +1,70 @@
 # Hardware test checklist
 
 Install the build that matches your firmware (see README), then work through the list. Record
-the firmware version, the results and any screenshots (qFlipper → screen streaming →
-screenshot) in this file.
+the firmware version and the results in this file. Screenshots: see
+[SCREENSHOT_CHECKLIST.md](SCREENSHOT_CHECKLIST.md).
+
+Since v1.0.3 the UI says **Sets** where older sections below say *rounds*, and the target
+message is `Set N complete!` instead of `Target reached!`. The older sections are kept as they
+were tested.
+
+## v1.0.3 – menu and UX (NOT yet validated on hardware)
+
+**Status: not tested on a Flipper Zero yet.** Host unit tests: 62/62. Builds: Momentum
+`mntm-012` and official `1.5.1`, no warnings.
+
+Install `dist/v1.0.3/momentum-mntm-012/flipper_dhikr.fap` over v1.0.2. Keep a copy of
+`SD:/apps_data/flipper_dhikr/settings.txt` first. Rows marked ★ are the priority set.
+
+### Update
+
+| # | ★ | Test | Expected | Result |
+|---|---|---|---|---|
+| V1 | ★ | Install v1.0.3 over v1.0.2 with existing data | All profiles, names, counts, completed rounds (now shown as Sets), targets, active profile and the four feedback switches are unchanged; no new `.bak` file; `settings.txt` still has `version=3` | ☐ |
+| V2 | | About | Shows `Flipper Dhikr v1.0.3`, a "Sets" and a "Profiles" section | ☐ |
+
+### Main menu
+
+| # | ★ | Test | Expected | Result |
+|---|---|---|---|---|
+| V3 | ★ | Open the app | Menu: `Start Counting`, `Dhikr Profiles`, `Feedback Settings`, `Reset Counter`, `About`; **no** `Target Settings`; all readable, scrolling works | ☐ |
+| V4 | | Open each entry, then Back | Returns to the main menu each time; Back on the main menu exits | ☐ |
+
+### Profiles and Edit Target
+
+| # | ★ | Test | Expected | Result |
+|---|---|---|---|---|
+| V5 | ★ | Dhikr Profiles → OK on another profile | `*` moves at once, list stays open | ☐ |
+| V6 | ★ | Hold OK on a profile that is **not** active | Header = that profile's name; `Edit Target (N)`, plus `Rename Profile` / `Delete Profile` for custom profiles | ☐ |
+| V7 | ★ | … → `Edit Target` → `99 times` | Back in the same edit menu showing `Edit Target (99)`; Back → list: `*` still on the previously active profile; that profile's count unchanged | ☐ |
+| V8 | ★ | … → `Edit Target` → `Custom value...` → 100 | Back in the edit menu with `Edit Target (100)` (not the main menu); Back → list → Back → main menu | ☐ |
+| V9 | | Edit Target on the **active** profile with count 10 and Sets 2, then Start Counting | Count 10, Sets 2, new target shown | ☐ |
+| V10 | ★ | Hold OK (or Edit Profiles...) on SubhanAllah / Alhamdulillah / Allahu Akbar | Only `Edit Target (N)` | ☐ |
+| V11 | | Edit Profiles... → custom profile → Rename Profile; Delete Profile (No, then Yes) | Rename works; delete asks with No pre-selected and only deletes on Yes | ☐ |
+| V12 | | Add profiles until 10+ exist | List scrolls; `+ Add Profile` and `Edit Profiles...` reachable at the end | ☐ |
+| V13 | | Exit after a target change, reopen | New target kept | ☐ |
+
+### Sets and completion message (target 33; feedback default Counter OFF / Target ON)
+
+| # | ★ | Test | Expected | Result |
+|---|---|---|---|---|
+| V14 | | Counter at 0/33 and at ~30/33 | Count large and readable; bar text `0%  Sets: 0` / `90%  Sets: 0` | ☐ |
+| V15 | ★ | Count 32 → 33 | `33/33` with `Set 1 complete!` for ~1 s (text fully inside the bar), target feedback once, then `0/33` and `Sets: 1` | ☐ |
+| V16 | | Complete a second set | `Set 2 complete!`, then `Sets: 2` | ☐ |
+| V17 | ★ | Hold Down right after a completed set | `32/33`, `Set undone`, Sets back by 1 | ☐ |
+| V18 | | Press OK quickly during `Set N complete!` | Every press counts once, the message closes, UI never freezes | ☐ |
+| V19 | ★ | Exit the app and reopen | Sets and count kept per profile | ☐ |
+| V20 | | Reset Counter | Dialog shows `Count N, sets M`, No pre-selected; Yes clears count and sets of the active profile only | ☐ |
+
+### Unchanged behaviour (spot checks)
+
+| # | ★ | Test | Expected | Result |
+|---|---|---|---|---|
+| V21 | | Counter ON / Target OFF | Tick on counts 1–32, silent at 33, `Set 1 complete!` shown | ☐ |
+| V22 | | Stealth mode on | `Muted` on the counter screen | ☐ |
+| V23 | | Left/Right on the counter screen | Switches profile, each with its own count and Sets | ☐ |
+
+Firmware tested: _______  Date: _______
 
 ## v1.0 – results reported by the user (Momentum)
 
