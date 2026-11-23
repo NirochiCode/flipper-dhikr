@@ -3,7 +3,8 @@
  * Build and run with `make -C tests` (see tests/Makefile).
  *
  * Tests marked [R<n>] cover requirement n of the v1.0.1 test list, [F<n>] the v1.0.2
- * feedback list and [U<n>] the v1.0.3 menu/UX regression list.
+ * feedback list, [U<n>] the v1.0.3 menu/UX list and [P<n>] the v1.0.3 profile
+ * details / reset list.
  */
 #include <stdbool.h>
 #include <stdint.h>
@@ -1778,6 +1779,284 @@ static void test_feedback_unchanged_by_ux_update(void) { // [U12]
     EXPECT_EQ_U(s.profiles[0].counter.rounds, 3);
 }
 
+/* ========================================================================= */
+/* v1.0.3 profile details, View Progress, per-profile reset [P1-P14]         */
+/* Numbers in brackets refer to the v1.0.3 refinement test list (1-31).      */
+/* ========================================================================= */
+
+/* SubhanAllah 20/33 with 2 sets (active), Istighfar 15/100 with 4 sets. */
+static uint8_t setup_reset_example(DhikrState* s) {
+    dhikr_state_init_defaults(s);
+    uint8_t a = 0;
+    EXPECT_EQ_U(dhikr_state_add_custom(s, "Istighfar", 100, &a), DhikrProfileOk);
+    s->profiles[0].counter.count = 20;
+    s->profiles[0].counter.rounds = 2;
+    s->profiles[a].counter.count = 15;
+    s->profiles[a].counter.rounds = 4;
+    s->profiles[1].counter.count = 7;
+    s->profiles[1].counter.rounds = 1;
+    EXPECT(dhikr_state_select(s, 0));
+    return a;
+}
+
+static void test_main_menu_entries_unique(void) { // [P1] (1-3)
+    for(int i = 0; i < DhikrMainMenuCount; i++) {
+        const char* a = dhikr_main_menu_label((DhikrMainMenuItem)i);
+        EXPECT(a[0] != '\0');
+        EXPECT(strstr(a, "Reset") == NULL && strstr(a, "Target") == NULL);
+        for(int j = i + 1; j < DhikrMainMenuCount; j++) {
+            EXPECT(strcmp(a, dhikr_main_menu_label((DhikrMainMenuItem)j)) != 0);
+        }
+    }
+}
+
+static void test_profile_details_actions(void) { // [P2] (4-8)
+    DhikrState s;
+    setup_reset_example(&s);
+    char label[40];
+    for(uint8_t i = 0; i < s.profile_count; i++) {
+        const DhikrProfile* p = &s.profiles[i];
+        EXPECT(dhikr_profile_action_allowed(p, DhikrProfileActionProgress));
+        EXPECT(dhikr_profile_action_allowed(p, DhikrProfileActionTarget));
+        EXPECT(dhikr_profile_action_allowed(p, DhikrProfileActionReset));
+        EXPECT_EQ_U(dhikr_profile_action_allowed(p, DhikrProfileActionRename), !p->builtin);
+        EXPECT_EQ_U(dhikr_profile_action_allowed(p, DhikrProfileActionDelete), !p->builtin);
+    }
+    dhikr_profile_action_label(&s.profiles[0], DhikrProfileActionProgress, label, sizeof(label));
+    EXPECT(strcmp(label, "View Progress") == 0);
+    dhikr_profile_action_label(&s.profiles[0], DhikrProfileActionReset, label, sizeof(label));
+    EXPECT(strcmp(label, "Reset Progress") == 0);
+}
+
+static void test_view_progress_reads_chosen_profile(void) { // [P3] (9-12)
+    DhikrState s;
+    const uint8_t a = setup_reset_example(&s);
+    DhikrState before = s;
+
+    // The details are found by id, independent of the active profile.
+    const int index = dhikr_state_find(&s, "c1");
+    EXPECT_EQ_U(index, a);
+    DhikrProgressText text;
+    dhikr_progress_text(&s.profiles[index], &text);
+    EXPECT(strcmp(text.current, "Current: 15/100") == 0);
+    EXPECT(strcmp(text.sets, "Completed Sets: 4") == 0);
+    EXPECT(strcmp(text.target, "Target: 100") == 0);
+
+    dhikr_progress_text(&s.profiles[0], &text);
+    EXPECT(strcmp(text.current, "Current: 20/33") == 0);
+    EXPECT(strcmp(text.sets, "Completed Sets: 2") == 0);
+
+    // Reading changes nothing, including the active profile.
+    EXPECT(memcmp(&s, &before, sizeof(s)) == 0);
+    EXPECT_EQ_U(s.active, 0);
+}
+
+static void test_counter_shows_percentage_only(void) { // [P4] (14-15)
+    DhikrCounter c;
+    dhikr_counter_init(&c, 33);
+    c.count = 29;
+    c.rounds = 5;
+    DhikrBanner none = {0};
+    char text[32];
+    dhikr_counter_status_text(&c, &none, 0, text, sizeof(text));
+    EXPECT(strcmp(text, "87%") == 0); // 29/33, rounded down as in v1.0.2
+    EXPECT(strstr(text, "Set") == NULL);
+    c.count = 0;
+    dhikr_counter_status_text(&c, NULL, 0, text, sizeof(text));
+    EXPECT(strcmp(text, "0%") == 0);
+}
+
+static void test_target_reached_message(void) { // [P5] (16-18)
+    DhikrState s;
+    dhikr_state_init_defaults(&s);
+    DhikrBanner banner = {0};
+    DhikrProfile* p = dhikr_state_active(&s);
+    p->counter.count = 32;
+    char text[32];
+
+    DhikrActionOutcome o = dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 1000);
+    EXPECT_EQ_U(o.feedback_event, DhikrFeedbackEventTarget);
+    EXPECT_EQ_U(p->counter.count, 0); // automatic restart
+    EXPECT_EQ_U(p->counter.rounds, 1); // exactly one set
+    dhikr_counter_status_text(&p->counter, &banner, 1500, text, sizeof(text));
+    EXPECT(strcmp(text, "Target reached!") == 0);
+    // After ~1 s the bar shows the percentage of the new set again.
+    dhikr_counter_status_text(&p->counter, &banner, 2000, text, sizeof(text));
+    EXPECT(strcmp(text, "0%") == 0);
+
+    // Undo still works: restores 32/33 and removes the set.
+    dhikr_counter_apply(&s, &banner, DhikrCounterActionUndo, 2100);
+    EXPECT_EQ_U(p->counter.count, 32);
+    EXPECT_EQ_U(p->counter.rounds, 0);
+    // Next count after undo: 33 -> set completed again, once.
+    dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 2200);
+    EXPECT_EQ_U(p->counter.rounds, 1);
+    // Normal undo of a count.
+    dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 2300);
+    dhikr_counter_apply(&s, &banner, DhikrCounterActionUndo, 2400);
+    EXPECT_EQ_U(p->counter.count, 0);
+    dhikr_counter_status_text(&p->counter, &banner, 2500, text, sizeof(text));
+    EXPECT(strcmp(text, "Undo: -1") == 0);
+}
+
+static void test_reset_inactive_profile_by_id(void) { // [P6] (19-22, 25)
+    DhikrState s;
+    const uint8_t a = setup_reset_example(&s);
+    DhikrState before = s;
+
+    EXPECT(dhikr_state_reset_profile(&s, s.profiles[a].id));
+
+    // Istighfar: 15 -> 0, 4 sets -> 0, target 100, name and id kept.
+    EXPECT_EQ_U(s.profiles[a].counter.count, 0);
+    EXPECT_EQ_U(s.profiles[a].counter.rounds, 0);
+    EXPECT_EQ_U(s.profiles[a].counter.target, 100);
+    EXPECT(strcmp(s.profiles[a].name, "Istighfar") == 0);
+    EXPECT(strcmp(s.profiles[a].id, "c1") == 0);
+    // SubhanAllah (active) and every other profile untouched; active unchanged.
+    EXPECT_EQ_U(s.active, 0);
+    EXPECT_EQ_U(s.profiles[0].counter.count, 20);
+    EXPECT_EQ_U(s.profiles[0].counter.rounds, 2);
+    for(uint8_t i = 0; i < s.profile_count; i++) {
+        if(i == a) continue;
+        EXPECT(memcmp(&s.profiles[i], &before.profiles[i], sizeof(DhikrProfile)) == 0);
+    }
+    EXPECT_EQ_U(s.profile_count, before.profile_count);
+    EXPECT(feedback_equal(&s.feedback, &before.feedback));
+
+    // Unknown id: nothing changes.
+    DhikrState after = s;
+    EXPECT(!dhikr_state_reset_profile(&s, "c99"));
+    EXPECT(!dhikr_state_reset_profile(&s, NULL));
+    EXPECT(!dhikr_state_reset_profile(NULL, "c1"));
+    EXPECT(memcmp(&s, &after, sizeof(s)) == 0);
+}
+
+static void test_reset_by_id_after_index_shift(void) { // [P7]
+    // Indexes can move (a profile before it is deleted); the id still names
+    // the right profile.
+    DhikrState s;
+    dhikr_state_init_defaults(&s);
+    uint8_t x, y;
+    dhikr_state_add_custom(&s, "First", 33, &x);
+    dhikr_state_add_custom(&s, "Second", 33, &y);
+    s.profiles[y].counter.count = 9;
+    char id[DHIKR_PROFILE_ID_SIZE];
+    memcpy(id, s.profiles[y].id, sizeof(id));
+    EXPECT_EQ_U(dhikr_state_delete(&s, x), DhikrProfileOk);
+    EXPECT(dhikr_state_reset_profile(&s, id));
+    const int now = dhikr_state_find(&s, id);
+    EXPECT(now >= 0);
+    EXPECT(strcmp(s.profiles[now].name, "Second") == 0);
+    EXPECT_EQ_U(s.profiles[now].counter.count, 0);
+}
+
+static void test_reset_cancel_changes_nothing(void) { // [P8] (23)
+    // The scene resets only on DhikrConfirmAccepted; No, Back and the default
+    // selection all cancel.
+    DhikrState s;
+    setup_reset_example(&s);
+    const DhikrState before = s;
+    const DhikrConfirmInput sequences[3][2] = {
+        {DhikrConfirmInputOk, DhikrConfirmInputOk}, // default No
+        {DhikrConfirmInputRight, DhikrConfirmInputBack}, // Yes highlighted, Back
+        {DhikrConfirmInputBack, DhikrConfirmInputBack},
+    };
+    for(int i = 0; i < 3; i++) {
+        DhikrConfirm confirm;
+        dhikr_confirm_begin(&confirm);
+        DhikrConfirmOutcome r = dhikr_confirm_handle(&confirm, sequences[i][0]);
+        if(r == DhikrConfirmPending) r = dhikr_confirm_handle(&confirm, sequences[i][1]);
+        EXPECT_EQ_U(r, DhikrConfirmCancelled);
+        if(r == DhikrConfirmAccepted) dhikr_state_reset_profile(&s, "c1");
+    }
+    EXPECT(memcmp(&s, &before, sizeof(s)) == 0);
+}
+
+static void test_undo_cannot_restore_reset(void) { // [P9] (24)
+    DhikrState s;
+    dhikr_state_init_defaults(&s);
+    DhikrBanner banner = {0};
+    DhikrProfile* p = dhikr_state_active(&s);
+    s.profiles[1].counter.count = 11;
+    // Two completed sets, the second one just now (undo of that set possible).
+    for(int i = 0; i < 66; i++) dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 0);
+    EXPECT_EQ_U(p->counter.rounds, 2);
+    EXPECT(p->counter.undo_round_available);
+
+    EXPECT(dhikr_state_reset_profile(&s, p->id));
+    EXPECT(!p->counter.undo_round_available);
+
+    // Back on the counter screen: hold Down.
+    DhikrActionOutcome o = dhikr_counter_apply(&s, &banner, DhikrCounterActionUndo, 100);
+    EXPECT(!o.changed);
+    EXPECT_EQ_U(banner.kind, DhikrBannerNothingToUndo);
+    EXPECT_EQ_U(p->counter.count, 0);
+    EXPECT_EQ_U(p->counter.rounds, 0);
+    EXPECT_EQ_U(s.profiles[1].counter.count, 11);
+
+    // Same for an inactive profile whose undo information was still pending.
+    dhikr_state_select(&s, 1);
+    s.profiles[1].counter.count = 32;
+    dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 200); // completes a set
+    dhikr_state_select(&s, 0);
+    EXPECT(dhikr_state_reset_profile(&s, s.profiles[1].id));
+    dhikr_state_select(&s, 1);
+    dhikr_counter_apply(&s, &banner, DhikrCounterActionUndo, 300);
+    EXPECT_EQ_U(s.profiles[1].counter.count, 0);
+    EXPECT_EQ_U(s.profiles[1].counter.rounds, 0);
+}
+
+static void test_reset_persisted_and_usable(void) { // [P10] (26-27)
+    fake_reset();
+    DhikrState s, loaded;
+    const uint8_t a = setup_reset_example(&s);
+    EXPECT(dhikr_state_reset_profile(&s, "c1"));
+    EXPECT_EQ_U(save_and_reload(&s, &loaded), DhikrLoadOk);
+    EXPECT(states_equal(&s, &loaded));
+    EXPECT_EQ_U(loaded.profiles[a].counter.count, 0);
+    EXPECT_EQ_U(loaded.profiles[a].counter.rounds, 0);
+    EXPECT_EQ_U(loaded.profiles[a].counter.target, 100);
+    EXPECT_EQ_U(loaded.profiles[0].counter.count, 20);
+    EXPECT_EQ_U(loaded.active, 0);
+
+    // The reset profile counts normally afterwards.
+    DhikrBanner banner = {0};
+    dhikr_state_select(&loaded, a);
+    for(int i = 0; i < 101; i++) {
+        dhikr_counter_apply(&loaded, &banner, DhikrCounterActionIncrement, 0);
+    }
+    EXPECT_EQ_U(loaded.profiles[a].counter.count, 1);
+    EXPECT_EQ_U(loaded.profiles[a].counter.rounds, 1);
+}
+
+static void test_reset_save_failure_consistent(void) { // [P11] (31)
+    fake_reset();
+    DhikrState s, loaded;
+    setup_reset_example(&s);
+    DhikrStore store;
+    dhikr_store_init(&store, &g_io);
+    EXPECT_EQ_U(dhikr_store_save(&store, &s), DhikrSaveWritten);
+
+    // The card refuses the write: the old file stays complete and valid.
+    EXPECT(dhikr_state_reset_profile(&s, "c1"));
+    g_fs.write_error = true;
+    EXPECT_EQ_U(dhikr_store_save(&store, &s), DhikrSaveFailed);
+    DhikrStore probe;
+    dhikr_store_init(&probe, &g_io);
+    EXPECT_EQ_U(dhikr_store_load(&probe, &loaded), DhikrLoadOk);
+    EXPECT_EQ_U(loaded.profiles[4].counter.count, 15); // previous state, not half-written
+    EXPECT_EQ_U(loaded.profiles[4].counter.rounds, 4);
+
+    // The next attempt (the app keeps the change dirty) stores the reset.
+    g_fs.write_error = false;
+    EXPECT_EQ_U(dhikr_store_save(&store, &s), DhikrSaveWritten);
+    dhikr_store_init(&probe, &g_io);
+    EXPECT_EQ_U(dhikr_store_load(&probe, &loaded), DhikrLoadOk);
+    EXPECT_EQ_U(loaded.profiles[4].counter.count, 0);
+    EXPECT_EQ_U(loaded.profiles[4].counter.rounds, 0);
+    EXPECT(states_equal(&s, &loaded));
+}
+
 static void test_crc32_known_vector(void) {
     EXPECT_EQ_U(dhikr_crc32("123456789", 9), 0xCBF43926UL);
 }
@@ -1860,6 +2139,19 @@ int main(void) {
     RUN_TEST(test_target_change_keeps_counts_and_sets);
     RUN_TEST(test_v1_0_2_settings_compatible);
     RUN_TEST(test_feedback_unchanged_by_ux_update);
+
+    // v1.0.3 profile details, View Progress, per-profile reset [P1-P11]
+    RUN_TEST(test_main_menu_entries_unique);
+    RUN_TEST(test_profile_details_actions);
+    RUN_TEST(test_view_progress_reads_chosen_profile);
+    RUN_TEST(test_counter_shows_percentage_only);
+    RUN_TEST(test_target_reached_message);
+    RUN_TEST(test_reset_inactive_profile_by_id);
+    RUN_TEST(test_reset_by_id_after_index_shift);
+    RUN_TEST(test_reset_cancel_changes_nothing);
+    RUN_TEST(test_undo_cannot_restore_reset);
+    RUN_TEST(test_reset_persisted_and_usable);
+    RUN_TEST(test_reset_save_failure_consistent);
 
     printf("\n%d tests, %d failed\n", g_tests_run, g_tests_failed);
     return g_tests_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
