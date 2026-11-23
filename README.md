@@ -288,7 +288,7 @@ See [docs/ROADMAP.md](docs/ROADMAP.md).
 ```
 application.fam      app manifest (appid flipper_dhikr)
 src/, include/       C sources and headers (logic, storage, feedback, views, scenes)
-assets/              10x10 app icon
+assets/              10x10 app icon (crescent and star, see scripts/generate_icon.py)
 tests/               host unit tests (make -C tests)
 scripts/build.sh     labelled builds for Momentum and official SDKs
 docs/                ARCHITECTURE, ROADMAP, CHANGELOG, HARDWARE_TESTS, SCREENSHOT_CHECKLIST

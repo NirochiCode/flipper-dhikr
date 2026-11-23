@@ -27,6 +27,8 @@ Menus and navigation only. No new statistics, same settings format.
   About page).
 
 ### Added
+- **New app icon:** a crescent with a small five-pointed star (10×10, 1-bit), generated
+  from a fixed pixel matrix by `scripts/generate_icon.py` (also validates the file).
 - **View Progress** (read-only) per profile: `Current: 15/100`, `Completed Sets: 4`,
   `Target: 100`. Uses the already stored rounds; no new data.
 - **Reset Progress** per profile: dialog `Reset progress?` with the profile name and its

@@ -75,6 +75,11 @@ a custom profile "Istighfar" (target 100) with about 15/100 and some sets.
 | V24 | | Stealth mode on | `Muted` on the counter screen | ☐ |
 | V25 | | 10+ profiles | Profile list scrolls; `+ Add Profile` and `Edit Profiles...` reachable | ☐ |
 | V26 | | Dhikr Profiles → `Edit Profiles...` | Only names (`SubhanAllah`, `Alhamdulillah`, `Allahu Akbar`, custom names); no `(fixed)`; built-ins still offer no Rename/Delete | ☐ |
+| V27 | ★ | Open the app menu (Apps → Tools) | Flipper Dhikr icon is visible | ☐ |
+| V28 | ★ | Look at the icon | Crescent clearly recognisable | ☐ |
+| V29 | ★ | Look at the icon | Star to the right of the crescent reads as five-pointed, not as a cross | ☐ |
+| V30 | | Move the selection on and off Flipper Dhikr | Icon readable both highlighted and not highlighted | ☐ |
+| V31 | ★ | Start the app from the menu | App starts normally (main menu, counting works) | ☐ |
 
 Firmware tested: _______  Date: _______
 
