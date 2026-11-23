@@ -8,21 +8,43 @@ Since v1.0.3 the UI says **sets** where older sections below say *rounds*, `Rese
 now `Reset Progress` in each profile's details, and targets are edited there too. The older
 sections are kept as they were tested.
 
-## v1.0.3 – menu, profile details and reset (NOT yet validated on hardware)
+## v1.0.3 – menu, profile details and reset (validated on Momentum hardware: core functions)
 
-**Status: the current v1.0.3 build has not been tested on a Flipper Zero.** Host unit tests:
-74/74. Builds: Momentum `mntm-012` and official `1.5.1`, no warnings.
+**Status:** the nine prioritised release checks (R1–R9) **passed** on the user's Flipper
+Zero with **Momentum** firmware (`dist/v1.0.3/momentum-mntm-012/flipper_dhikr.fap`), reported
+by the user on 2026-11-23. Host unit tests: 74/74. Builds: Momentum `mntm-012` and official
+`1.5.1`, no warnings. **The official firmware build has not been tested on hardware.**
 
-An earlier v1.0.3 build (with `Reset Counter` in the main menu and `Sets: N` on the counter
-screen) was tried on Momentum. The user observed that a reset only changed the active profile.
-Cause: that reset always used the active profile, not the profile highlighted in the list
-(see CHANGELOG). This build replaces it with Reset Progress per profile. No other results of
-that run were recorded, so the table below starts empty.
+The nine release checks do not replace all 31 single tests. Below, a single test is marked
+**PASS** only where a release check clearly covers it; all others are **NOT TESTED**.
 
-**Screenshot evidence (2026-11-23):** qFlipper screenshots of the current build (see
-`screenshots/`) show the expected screens for V2 (first three entries), V5, V6, V11, V12,
-V15 (dialog with No selected), V26 and the Add Profile flow. They show the screens only; the
-rows stay open (☐) until the tests, including behaviour, saving and restart, are confirmed.
+### Release checks (user report, Momentum)
+
+| # | Release check | Result | Single tests marked PASS |
+|---|---|---|---|
+| R1 | Update and data transfer: existing profiles, targets, sets and feedback settings kept | PASS | V1 |
+| R2 | Main menu and counter: four menu entries, percentage, `Target reached!`, undo | PASS | V2, V5, V6 |
+| R3 | Profile management: inactive profiles can be edited without changing the active profile | PASS | V10 |
+| R4 | View Progress: Current, Target and Completed Sets show the right values | PASS | V12 |
+| R5 | Reset Progress of an inactive profile: only its count and sets go to 0 | PASS | V15, V17, V18 |
+| R6 | Reset cancel and undo: No and Back change nothing; after a confirmed reset nothing can be restored | PASS | V16, V19 |
+| R7 | Saving after restart: reset values kept, other profiles unchanged | PASS | V20 |
+| R8 | Feedback: counter and target vibration/sound still work independently | PASS | (none: no single combination reported, see V23) |
+| R9 | New app icon: crescent and star recognisable in the menu, app starts correctly | PASS | V27, V28, V29, V31 |
+
+Result: 16 single tests PASS, 15 NOT TESTED. Notes on the mapping:
+- V1: the user confirmed that data was kept; the file-level details (no new `.bak`,
+  `version=3`) were not reported separately.
+- R2 confirms undo in general, but not the set restore directly after a target (V7).
+- R3 confirms editing an inactive profile in general; V9 (`*` moves on OK), V11 (built-in
+  details) and V14 (Edit Target on an inactive profile) were not reported individually.
+- V29: the user reported the star as recognisable.
+- Earlier v1.0.3 build: a reset there only changed the active profile, because it always used
+  the active profile rather than the one highlighted in the list (see CHANGELOG). This build
+  replaced it with Reset Progress per profile, and R5–R7 confirm the fix.
+
+**Screenshot evidence (2026-11-23):** qFlipper screenshots of this build (`screenshots/`) also
+show the expected screens for V11 and V26. Screenshots are not counted as test results.
 
 Install `dist/v1.0.3/momentum-mntm-012/flipper_dhikr.fap`. Keep a copy of
 `SD:/apps_data/flipper_dhikr/settings.txt` first. Rows marked ★ are the priority set.
@@ -34,59 +56,60 @@ a custom profile "Istighfar" (target 100) with about 15/100 and some sets.
 
 | # | ★ | Test | Expected | Result |
 |---|---|---|---|---|
-| V1 | ★ | Install over the existing data (v1.0.2 or the earlier v1.0.3 build) | All profiles, names, counts, completed sets, targets, active profile and feedback switches unchanged; no new `.bak` file; `settings.txt` still `version=3` | ☐ |
-| V2 | ★ | Open the app | Menu: `Start Counting`, `Dhikr Profiles`, `Feedback Settings`, `About`; **no** `Target Settings`, **no** `Reset Counter`; fully readable | ☐ |
-| V3 | | Open each entry, then Back | Returns to the main menu; Back on the main menu exits | ☐ |
-| V4 | | About | `Flipper Dhikr v1.0.3`; Sets and Profiles sections mention the details menu | ☐ |
+| V1 | ★ | Install over the existing data (v1.0.2 or the earlier v1.0.3 build) | All profiles, names, counts, completed sets, targets, active profile and feedback switches unchanged; no new `.bak` file; `settings.txt` still `version=3` | PASS |
+| V2 | ★ | Open the app | Menu: `Start Counting`, `Dhikr Profiles`, `Feedback Settings`, `About`; **no** `Target Settings`, **no** `Reset Counter`; fully readable | PASS |
+| V3 | | Open each entry, then Back | Returns to the main menu; Back on the main menu exits | NOT TESTED |
+| V4 | | About | `Flipper Dhikr v1.0.3`; Sets and Profiles sections mention the details menu | NOT TESTED |
 
 ### Counter screen
 
 | # | ★ | Test | Expected | Result |
 |---|---|---|---|---|
-| V5 | ★ | Counter at 29/33 | Name, large `29`, `/33`, bar with `87%`; **no** `Sets` text; `▼Undo` and `(+1)` at the bottom | ☐ |
-| V6 | ★ | Count 32 → 33 | `33/33` and `Target reached!` for ~1 s, target feedback once, then `0/33` and `0%` | ☐ |
-| V7 | | Hold Down right after a completed set | `32/33`, `Set undone`; View Progress shows one set fewer | ☐ |
-| V8 | | Press OK quickly during `Target reached!`; Left/Right; Back | Every press counts once, UI never freezes; profile switch and Back as before | ☐ |
+| V5 | ★ | Counter at 29/33 | Name, large `29`, `/33`, bar with `87%`; **no** `Sets` text; `▼Undo` and `(+1)` at the bottom | PASS |
+| V6 | ★ | Count 32 → 33 | `33/33` and `Target reached!` for ~1 s, target feedback once, then `0/33` and `0%` | PASS |
+| V7 | | Hold Down right after a completed set | `32/33`, `Set undone`; View Progress shows one set fewer | NOT TESTED |
+| V8 | | Press OK quickly during `Target reached!`; Left/Right; Back | Every press counts once, UI never freezes; profile switch and Back as before | NOT TESTED |
 
 ### Profile details and View Progress
 
 | # | ★ | Test | Expected | Result |
 |---|---|---|---|---|
-| V9 | ★ | Dhikr Profiles → OK on a profile | `*` moves at once, list stays open | ☐ |
-| V10 | ★ | Highlight Istighfar (not active), hold OK | Header `Istighfar`; `View Progress`, `Edit Target (100)`, `Rename Profile`, `Reset Progress`, `Delete Profile`; all reachable by scrolling | ☐ |
-| V11 | ★ | Hold OK on SubhanAllah / Alhamdulillah / Allahu Akbar | `View Progress`, `Edit Target (N)`, `Reset Progress` only | ☐ |
-| V12 | ★ | Istighfar → View Progress | `Istighfar`, `Current: 15/100`, `Completed Sets: N`, `Target: 100`, matching the data; nothing changes on OK/Up/Down; Back → Istighfar details; `*` still on SubhanAllah | ☐ |
-| V13 | | Long custom name (16 characters) → View Progress | Name fully readable (smaller font) | ☐ |
-| V14 | | Istighfar → Edit Target → 99 / Custom 100 | Back in Istighfar's details with the new value; active profile unchanged | ☐ |
+| V9 | ★ | Dhikr Profiles → OK on a profile | `*` moves at once, list stays open | NOT TESTED |
+| V10 | ★ | Highlight Istighfar (not active), hold OK | Header `Istighfar`; `View Progress`, `Edit Target (100)`, `Rename Profile`, `Reset Progress`, `Delete Profile`; all reachable by scrolling | PASS |
+| V11 | ★ | Hold OK on SubhanAllah / Alhamdulillah / Allahu Akbar | `View Progress`, `Edit Target (N)`, `Reset Progress` only | NOT TESTED |
+| V12 | ★ | Istighfar → View Progress | `Istighfar`, `Current: 15/100`, `Completed Sets: N`, `Target: 100`, matching the data; nothing changes on OK/Up/Down; Back → Istighfar details; `*` still on SubhanAllah | PASS |
+| V13 | | Long custom name (16 characters) → View Progress | Name fully readable (smaller font) | NOT TESTED |
+| V14 | | Istighfar → Edit Target → 99 / Custom 100 | Back in Istighfar's details with the new value; active profile unchanged | NOT TESTED |
 
 ### Reset Progress
 
 | # | ★ | Test | Expected | Result |
 |---|---|---|---|---|
-| V15 | ★ | Istighfar → Reset Progress | Dialog `Reset progress?`, `Istighfar`, `15/100, sets N`; **No** highlighted | ☐ |
-| V16 | ★ | … → OK on No; again → Back | Nothing changes (check View Progress) | ☐ |
-| V17 | ★ | … → Right → OK (Yes) | Back in Istighfar's details; View Progress: `Current: 0/100`, `Completed Sets: 0`, `Target: 100`; name unchanged | ☐ |
-| V18 | ★ | After V17: Start Counting | Still SubhanAllah with its old count (e.g. 20/33); its View Progress still shows its sets | ☐ |
-| V19 | ★ | Reset the **active** profile right after completing a set, then Start Counting and hold Down | Count 0, `Nothing to undo`; no sets come back | ☐ |
-| V20 | ★ | Exit the app after a reset, reopen | Reset values kept; other profiles unchanged | ☐ |
-| V21 | | Count in the reset profile up to its target | Counts normally from 1; one set recorded at the target | ☐ |
+| V15 | ★ | Istighfar → Reset Progress | Dialog `Reset progress?`, `Istighfar`, `15/100, sets N`; **No** highlighted | PASS |
+| V16 | ★ | … → OK on No; again → Back | Nothing changes (check View Progress) | PASS |
+| V17 | ★ | … → Right → OK (Yes) | Back in Istighfar's details; View Progress: `Current: 0/100`, `Completed Sets: 0`, `Target: 100`; name unchanged | PASS |
+| V18 | ★ | After V17: Start Counting | Still SubhanAllah with its old count (e.g. 20/33); its View Progress still shows its sets | PASS |
+| V19 | ★ | Reset the **active** profile right after completing a set, then Start Counting and hold Down | Count 0, `Nothing to undo`; no sets come back | PASS |
+| V20 | ★ | Exit the app after a reset, reopen | Reset values kept; other profiles unchanged | PASS |
+| V21 | | Count in the reset profile up to its target | Counts normally from 1; one set recorded at the target | NOT TESTED |
 
 ### Unchanged behaviour (spot checks)
 
 | # | ★ | Test | Expected | Result |
 |---|---|---|---|---|
-| V22 | | Rename and Delete a custom profile | Work as in v1.0.2; delete asks, No pre-selected | ☐ |
-| V23 | | Counter ON / Target OFF | Tick on counts 1–32, silent at 33, `Target reached!` shown | ☐ |
-| V24 | | Stealth mode on | `Muted` on the counter screen | ☐ |
-| V25 | | 10+ profiles | Profile list scrolls; `+ Add Profile` and `Edit Profiles...` reachable | ☐ |
-| V26 | | Dhikr Profiles → `Edit Profiles...` | Only names (`SubhanAllah`, `Alhamdulillah`, `Allahu Akbar`, custom names); no `(fixed)`; built-ins still offer no Rename/Delete | ☐ |
-| V27 | ★ | Open the app menu (Apps → Tools) | Flipper Dhikr icon is visible | ☐ |
-| V28 | ★ | Look at the icon | Crescent clearly recognisable | ☐ |
-| V29 | ★ | Look at the icon | Star to the right of the crescent reads as five-pointed, not as a cross | ☐ |
-| V30 | | Move the selection on and off Flipper Dhikr | Icon readable both highlighted and not highlighted | ☐ |
-| V31 | ★ | Start the app from the menu | App starts normally (main menu, counting works) | ☐ |
+| V22 | | Rename and Delete a custom profile | Work as in v1.0.2; delete asks, No pre-selected | NOT TESTED |
+| V23 | | Counter ON / Target OFF | Tick on counts 1–32, silent at 33, `Target reached!` shown | NOT TESTED |
+| V24 | | Stealth mode on | `Muted` on the counter screen | NOT TESTED |
+| V25 | | 10+ profiles | Profile list scrolls; `+ Add Profile` and `Edit Profiles...` reachable | NOT TESTED |
+| V26 | | Dhikr Profiles → `Edit Profiles...` | Only names (`SubhanAllah`, `Alhamdulillah`, `Allahu Akbar`, custom names); no `(fixed)`; built-ins still offer no Rename/Delete | NOT TESTED |
+| V27 | ★ | Open the app menu (Apps → Tools) | Flipper Dhikr icon is visible | PASS |
+| V28 | ★ | Look at the icon | Crescent clearly recognisable | PASS |
+| V29 | ★ | Look at the icon | Star to the right of the crescent reads as five-pointed, not as a cross | PASS |
+| V30 | | Move the selection on and off Flipper Dhikr | Icon readable both highlighted and not highlighted | NOT TESTED |
+| V31 | ★ | Start the app from the menu | App starts normally (main menu, counting works) | PASS |
 
-Firmware tested: _______  Date: _______
+Firmware tested: Momentum (user's device; FAP built for `mntm-012`)  Date: 2026-11-23
+Official firmware 1.5.1: build only, NOT TESTED on hardware.
 
 ## v1.0 – results reported by the user (Momentum)
 

@@ -64,8 +64,13 @@ Menus, navigation and a new app icon. No new statistics, same settings format.
   APPCHK passed. Output in `dist/v1.0.3/`.
 
 ### Hardware
-- **The current v1.0.3 build is not yet validated on hardware.** An earlier v1.0.3 build was
-  tried on the device; that test led to the reset and counter-screen changes above.
+- **Momentum:** all nine prioritised release checks passed on the user's Flipper Zero
+  (update and data, main menu and counter, profile management, View Progress, Reset
+  Progress, cancel and undo after reset, saving after restart, feedback, app icon). 16 of the
+  31 single tests are covered; the rest are not tested (see HARDWARE_TESTS.md).
+- **Official firmware 1.5.1:** build only, not tested on hardware.
+- An earlier v1.0.3 build was tried on the device; that test led to the reset and
+  counter-screen changes above.
 
 ## [1.0.2] – 2026-11-22
 

@@ -21,7 +21,7 @@ knowledgeable people before release.
 - Counter and target vibration/sound as four independent switches
 - Settings format v3 with migration from v1/v2
 
-## v1.0.3 – Menu and UX (hardware test pending)
+## v1.0.3 – Menu and UX ✅ (hardware validated, Momentum)
 - Main menu: Start Counting, Dhikr Profiles, Feedback Settings, About
 - Profile details: View Progress, Edit Target (N), Rename, Reset Progress, Delete
 - Per-profile reset by id with a named confirmation

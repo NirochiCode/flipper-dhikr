@@ -8,15 +8,13 @@ the app shows **"Target reached!"**, gives a distinct vibration/sound signal, re
 completed set and starts again at 0. Mistakes can be undone. Built-in profiles and up to 13 custom
 ones keep independent counts, and everything is stored on the SD card.
 
-> **Status: v1.0.3 – not yet fully validated on hardware.**
+> **Status: v1.0.3 – validated on Momentum hardware (core functions).**
 > v1.0.3 brings a shorter main menu, a details menu per profile (View Progress, Edit Target,
-> Reset Progress, …), a simpler counter screen and a new app icon. All 74 host unit tests pass
+> Reset Progress, …), a simpler counter screen and a new app icon. All nine prioritised
+> release checks passed on a real Flipper Zero with Momentum firmware; 74 host unit tests pass
 > and both builds (Momentum mntm-012, official 1.5.1) complete without warnings. The
-> screenshots below were taken with qFlipper on a real Flipper Zero, but the v1.0.3 hardware
-> checklist has not been completed yet.
->
-> The latest published and hardware-validated release is **v1.0.2** (Momentum, 9/9 prioritised
-> tests passed).
+> official-firmware build has **not** been tested on hardware yet. Details:
+> [docs/HARDWARE_TESTS.md](docs/HARDWARE_TESTS.md).
 
 ## Screenshots
 
@@ -238,8 +236,11 @@ make -C tests     # 74 host unit tests, AddressSanitizer + UBSan
 
 Prebuilt `.fap` files for published versions are attached to the
 [GitHub releases](https://github.com/NirochiCode/flipper-dhikr/releases) (one per firmware).
-Until v1.0.3 is released, build it yourself as shown above. A submission to the official
-Flipper Apps Catalog is being prepared.
+Use the file that matches your firmware: `flipper_dhikr-v1.0.3-momentum-mntm-012.fap` (tested
+on hardware) or `flipper_dhikr-v1.0.3-official-1.5.1.fap` (build only, not yet tested on
+hardware). Rename it to `flipper_dhikr.fap` on the SD card so it replaces the previous version
+instead of appearing twice. A submission to the official Flipper Apps Catalog is being
+prepared.
 
 Choose **one** of these options:
 
@@ -279,8 +280,8 @@ CRC-32 checksum.
 | v1.0 features                         | ✅ tested on hardware (Momentum) by the user                                          |
 | v1.0.1 features                       | ✅ the 9 prioritised hardware tests passed (Momentum)                                 |
 | v1.0.2 independent feedback           | ✅ 9/9 prioritised hardware tests passed (Momentum); extended checklist still open    |
-| v1.0.3 menu, profile details, reset   | ⏳ hardware checklist open (see docs/HARDWARE_TESTS.md); screens captured on a device |
-| v1.0.3 app icon                       | ✅ 10×10, 1-bit, pixel-checked (`scripts/generate_icon.py --check`); ⏳ device check |
+| v1.0.3 menu, profile details, reset   | ✅ 9/9 prioritised release checks passed (Momentum); 15 extended single tests open  |
+| v1.0.3 app icon                       | ✅ 10×10, 1-bit, pixel-checked; recognisable in the app menu (Momentum)             |
 | Build, Momentum `mntm-012` (API 87.1) | ✅ no warnings, APPCHK passed                                                         |
 | Build, official `1.5.1` (API 88.2)    | ✅ no warnings, APPCHK passed                                                         |
 | Host unit tests                       | ✅ 74/74 (ASan + UBSan), including all 16 switch combinations                         |
