@@ -1,6 +1,7 @@
 #include "include/counter_input.h"
 
 #include <stddef.h>
+#include <stdio.h>
 
 DhikrCounterAction dhikr_counter_input_map(DhikrKey key, DhikrPress press) {
     if(press == DhikrPressShort) {
@@ -40,7 +41,6 @@ void dhikr_banner_show(DhikrBanner* banner, DhikrBannerKind kind, uint32_t value
     if(banner == NULL) return;
     banner->kind = kind;
     banner->value = value;
-    banner->set_number = 0;
     banner->started_ms = now_ms;
 }
 
@@ -48,7 +48,6 @@ void dhikr_banner_clear(DhikrBanner* banner) {
     if(banner == NULL) return;
     banner->kind = DhikrBannerNone;
     banner->value = 0;
-    banner->set_number = 0;
     banner->started_ms = 0;
 }
 
@@ -61,6 +60,39 @@ uint32_t dhikr_banner_remaining_ms(const DhikrBanner* banner, uint32_t now_ms) {
 
 bool dhikr_banner_is_visible(const DhikrBanner* banner, uint32_t now_ms) {
     return dhikr_banner_remaining_ms(banner, now_ms) > 0;
+}
+
+void dhikr_counter_status_text(
+    const DhikrCounter* counter,
+    const DhikrBanner* banner,
+    uint32_t now_ms,
+    char* out,
+    size_t out_size) {
+    if(out == NULL || out_size == 0) return;
+    const DhikrBannerKind kind =
+        dhikr_banner_is_visible(banner, now_ms) ? banner->kind : DhikrBannerNone;
+    switch(kind) {
+    case DhikrBannerTarget:
+        snprintf(out, out_size, "Target reached!");
+        break;
+    case DhikrBannerUndo:
+        snprintf(out, out_size, "Undo: -1");
+        break;
+    case DhikrBannerRoundRestored:
+        snprintf(out, out_size, "Set undone");
+        break;
+    case DhikrBannerNothingToUndo:
+        snprintf(out, out_size, "Nothing to undo");
+        break;
+    case DhikrBannerNone:
+    default:
+        snprintf(
+            out,
+            out_size,
+            "%lu%%",
+            (unsigned long)(dhikr_counter_progress_permille(counter) / 10));
+        break;
+    }
 }
 
 DhikrActionOutcome dhikr_counter_apply(
@@ -80,7 +112,6 @@ DhikrActionOutcome dhikr_counter_apply(
         outcome.play_feedback = true;
         if(dhikr_counter_increment(counter) == DhikrIncrementRoundCompleted) {
             dhikr_banner_show(banner, DhikrBannerTarget, target, now_ms);
-            if(banner != NULL) banner->set_number = counter->rounds; // already incremented
             outcome.feedback_event = DhikrFeedbackEventTarget;
             outcome.save_now = true; // the reset to 0 must reach the SD card
         } else {

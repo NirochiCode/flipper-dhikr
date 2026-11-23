@@ -96,40 +96,16 @@ static void counter_view_draw(Canvas* canvas, void* model_ptr) {
     counter_view_draw_name(canvas, model);
 
     char text[32];
+    // Percentage, or the banner message; completed sets are shown in View Progress.
+    dhikr_counter_status_text(counter, &model->banner, now, text, sizeof(text));
     float progress;
 
     if(banner == DhikrBannerTarget) {
-        // The set is already reset internally; show the completed set briefly.
+        // The set is already reset internally; show the completed target briefly.
         counter_view_draw_count(canvas, model->banner.value, model->banner.value);
-        if(model->banner.set_number > 0) {
-            snprintf(
-                text, sizeof(text), "Set %lu complete!", (unsigned long)model->banner.set_number);
-        } else {
-            snprintf(text, sizeof(text), "Target reached!");
-        }
         progress = 1.0f;
     } else {
         counter_view_draw_count(canvas, counter->count, counter->target);
-        switch(banner) {
-        case DhikrBannerUndo:
-            snprintf(text, sizeof(text), "Undo: -1");
-            break;
-        case DhikrBannerRoundRestored:
-            snprintf(text, sizeof(text), "Set undone");
-            break;
-        case DhikrBannerNothingToUndo:
-            snprintf(text, sizeof(text), "Nothing to undo");
-            break;
-        default:
-            // "Sets" = completed passes of this profile (stored as `rounds`).
-            snprintf(
-                text,
-                sizeof(text),
-                "%lu%%  Sets: %lu",
-                (unsigned long)(dhikr_counter_progress_permille(counter) / 10),
-                (unsigned long)counter->rounds);
-            break;
-        }
         progress = (float)dhikr_counter_progress_permille(counter) / 1000.0f;
     }
 

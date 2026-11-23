@@ -14,6 +14,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "include/feedback.h"
@@ -58,7 +59,7 @@ DhikrCounterAction dhikr_counter_input_map(DhikrKey key, DhikrPress press);
 
 typedef enum {
     DhikrBannerNone,
-    /** "Set N complete!" after a completed round (shown to the user as a "set"). */
+    /** "Target reached!" after a completed round (set). */
     DhikrBannerTarget,
     /** "Undo -1" */
     DhikrBannerUndo,
@@ -76,8 +77,6 @@ typedef struct {
     uint32_t started_ms;
     /** Value shown with the banner (the completed target for DhikrBannerTarget). */
     uint32_t value;
-    /** DhikrBannerTarget: number of the set just completed (1 = first set). */
-    uint32_t set_number;
 } DhikrBanner;
 
 void dhikr_banner_show(DhikrBanner* banner, DhikrBannerKind kind, uint32_t value, uint32_t now_ms);
@@ -86,6 +85,19 @@ void dhikr_banner_clear(DhikrBanner* banner);
 bool dhikr_banner_is_visible(const DhikrBanner* banner, uint32_t now_ms);
 /** Milliseconds until the banner disappears (0 if not visible). */
 uint32_t dhikr_banner_remaining_ms(const DhikrBanner* banner, uint32_t now_ms);
+
+/**
+ * Text inside the counter screen's progress bar: the percentage ("88%"), or
+ * the banner message while one is visible ("Target reached!", "Undo: -1",
+ * "Set undone", "Nothing to undo"). Completed sets are not shown here; they
+ * are in Profile details -> View Progress.
+ */
+void dhikr_counter_status_text(
+    const DhikrCounter* counter,
+    const DhikrBanner* banner,
+    uint32_t now_ms,
+    char* out,
+    size_t out_size);
 
 /* --- Applying an action ------------------------------------------------------ */
 
@@ -101,7 +113,7 @@ typedef struct {
 /**
  * Apply one counter-screen action to the active profile and update the banner.
  *
- * Every OK press counts exactly once, also while "Set N complete!" is shown:
+ * Every OK press counts exactly once, also while "Target reached!" is shown:
  * the press counts as the first of the next round and closes the banner
  * early, so no input is lost or counted twice. The target feedback is
  * requested exactly once per completed round.

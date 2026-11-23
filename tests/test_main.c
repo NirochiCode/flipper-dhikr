@@ -1631,12 +1631,14 @@ static void test_set_banner_and_undo(void) { // [U9]
     DhikrProfile* p = dhikr_state_active(&s);
     p->counter.count = 32;
 
-    // Completing the first set: banner "33/33 Set 1 complete!", target feedback once.
+    // Completing the first set: banner "33/33 Target reached!", target feedback once.
     DhikrActionOutcome o = dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 100);
     EXPECT_EQ_U(o.feedback_event, DhikrFeedbackEventTarget);
     EXPECT_EQ_U(banner.kind, DhikrBannerTarget);
     EXPECT_EQ_U(banner.value, 33);
-    EXPECT_EQ_U(banner.set_number, 1);
+    char text[32];
+    dhikr_counter_status_text(&p->counter, &banner, 150, text, sizeof(text));
+    EXPECT(strcmp(text, "Target reached!") == 0);
     EXPECT_EQ_U(p->counter.count, 0);
     EXPECT_EQ_U(p->counter.rounds, 1);
 
@@ -1644,24 +1646,24 @@ static void test_set_banner_and_undo(void) { // [U9]
     o = dhikr_counter_apply(&s, &banner, DhikrCounterActionUndo, 200);
     EXPECT(o.changed && o.save_now && !o.play_feedback);
     EXPECT_EQ_U(banner.kind, DhikrBannerRoundRestored);
-    EXPECT_EQ_U(banner.set_number, 0);
+    dhikr_counter_status_text(&p->counter, &banner, 250, text, sizeof(text));
+    EXPECT(strcmp(text, "Set undone") == 0);
     EXPECT_EQ_U(p->counter.count, 32);
     EXPECT_EQ_U(p->counter.rounds, 0);
 
     // Completing it again counts exactly one set, then the next one is set 2.
     dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 300);
-    EXPECT_EQ_U(banner.set_number, 1);
+    EXPECT_EQ_U(banner.kind, DhikrBannerTarget);
     EXPECT_EQ_U(p->counter.rounds, 1);
     for(int i = 0; i < 32; i++) dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 400);
     EXPECT_EQ_U(banner.kind, DhikrBannerNone); // normal counts close the banner
     dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 500);
-    EXPECT_EQ_U(banner.set_number, 2);
+    EXPECT_EQ_U(banner.kind, DhikrBannerTarget);
     EXPECT_EQ_U(p->counter.rounds, 2);
 
-    // Switching profiles clears the banner (and its set number).
+    // Switching profiles clears the banner.
     dhikr_counter_apply(&s, &banner, DhikrCounterActionNextProfile, 600);
     EXPECT_EQ_U(banner.kind, DhikrBannerNone);
-    EXPECT_EQ_U(banner.set_number, 0);
 }
 
 static void test_target_change_keeps_counts_and_sets(void) { // [U10]
@@ -1686,7 +1688,7 @@ static void test_target_change_keeps_counts_and_sets(void) { // [U10]
     dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 0);
     EXPECT_EQ_U(p->counter.count, 0);
     EXPECT_EQ_U(p->counter.rounds, 4);
-    EXPECT_EQ_U(banner.set_number, 4);
+    EXPECT_EQ_U(banner.kind, DhikrBannerTarget);
 
     // A target change right after a set clears the set undo (the restored
     // count would refer to the old target).
