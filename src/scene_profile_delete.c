@@ -18,7 +18,7 @@ void dhikr_scene_profile_delete_on_enter(void* context) {
     snprintf(
         detail,
         sizeof(detail),
-        "Count %lu, rounds %lu",
+        "Count %lu, sets %lu",
         (unsigned long)profile->counter.count,
         (unsigned long)profile->counter.rounds);
 

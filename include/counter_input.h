@@ -58,11 +58,11 @@ DhikrCounterAction dhikr_counter_input_map(DhikrKey key, DhikrPress press);
 
 typedef enum {
     DhikrBannerNone,
-    /** "Target reached!" after a completed round. */
+    /** "Set N complete!" after a completed round (shown to the user as a "set"). */
     DhikrBannerTarget,
     /** "Undo -1" */
     DhikrBannerUndo,
-    /** "Round restored" (undo of the completing count) */
+    /** "Set undone" (undo of the completing count) */
     DhikrBannerRoundRestored,
     /** "Nothing to undo" */
     DhikrBannerNothingToUndo,
@@ -76,6 +76,8 @@ typedef struct {
     uint32_t started_ms;
     /** Value shown with the banner (the completed target for DhikrBannerTarget). */
     uint32_t value;
+    /** DhikrBannerTarget: number of the set just completed (1 = first set). */
+    uint32_t set_number;
 } DhikrBanner;
 
 void dhikr_banner_show(DhikrBanner* banner, DhikrBannerKind kind, uint32_t value, uint32_t now_ms);
@@ -99,7 +101,7 @@ typedef struct {
 /**
  * Apply one counter-screen action to the active profile and update the banner.
  *
- * Every OK press counts exactly once, also while "Target reached!" is shown:
+ * Every OK press counts exactly once, also while "Set N complete!" is shown:
  * the press counts as the first of the next round and closes the banner
  * early, so no input is lost or counted twice. The target feedback is
  * requested exactly once per completed round.

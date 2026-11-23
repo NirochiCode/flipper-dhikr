@@ -23,7 +23,7 @@
 #include "include/ui.h"
 
 #define DHIKR_APP_NAME    "Flipper Dhikr"
-#define DHIKR_APP_VERSION "1.0.2"
+#define DHIKR_APP_VERSION "1.0.3"
 
 /** Unsaved counts are written at most this long after the first change. */
 #define DHIKR_AUTOSAVE_INTERVAL_MS 15000

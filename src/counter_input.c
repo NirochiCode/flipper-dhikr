@@ -40,6 +40,7 @@ void dhikr_banner_show(DhikrBanner* banner, DhikrBannerKind kind, uint32_t value
     if(banner == NULL) return;
     banner->kind = kind;
     banner->value = value;
+    banner->set_number = 0;
     banner->started_ms = now_ms;
 }
 
@@ -47,6 +48,7 @@ void dhikr_banner_clear(DhikrBanner* banner) {
     if(banner == NULL) return;
     banner->kind = DhikrBannerNone;
     banner->value = 0;
+    banner->set_number = 0;
     banner->started_ms = 0;
 }
 
@@ -78,6 +80,7 @@ DhikrActionOutcome dhikr_counter_apply(
         outcome.play_feedback = true;
         if(dhikr_counter_increment(counter) == DhikrIncrementRoundCompleted) {
             dhikr_banner_show(banner, DhikrBannerTarget, target, now_ms);
+            if(banner != NULL) banner->set_number = counter->rounds; // already incremented
             outcome.feedback_event = DhikrFeedbackEventTarget;
             outcome.save_now = true; // the reset to 0 must reach the SD card
         } else {

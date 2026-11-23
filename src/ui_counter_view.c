@@ -99,9 +99,14 @@ static void counter_view_draw(Canvas* canvas, void* model_ptr) {
     float progress;
 
     if(banner == DhikrBannerTarget) {
-        // The round is already reset internally; show the completed round briefly.
+        // The set is already reset internally; show the completed set briefly.
         counter_view_draw_count(canvas, model->banner.value, model->banner.value);
-        snprintf(text, sizeof(text), "Target reached!");
+        if(model->banner.set_number > 0) {
+            snprintf(
+                text, sizeof(text), "Set %lu complete!", (unsigned long)model->banner.set_number);
+        } else {
+            snprintf(text, sizeof(text), "Target reached!");
+        }
         progress = 1.0f;
     } else {
         counter_view_draw_count(canvas, counter->count, counter->target);
@@ -110,26 +115,19 @@ static void counter_view_draw(Canvas* canvas, void* model_ptr) {
             snprintf(text, sizeof(text), "Undo: -1");
             break;
         case DhikrBannerRoundRestored:
-            snprintf(text, sizeof(text), "Round undone");
+            snprintf(text, sizeof(text), "Set undone");
             break;
         case DhikrBannerNothingToUndo:
             snprintf(text, sizeof(text), "Nothing to undo");
             break;
         default:
-            if(counter->rounds > 0) {
-                snprintf(
-                    text,
-                    sizeof(text),
-                    "%lu%%  Rounds: %lu",
-                    (unsigned long)(dhikr_counter_progress_permille(counter) / 10),
-                    (unsigned long)counter->rounds);
-            } else {
-                snprintf(
-                    text,
-                    sizeof(text),
-                    "%lu%%",
-                    (unsigned long)(dhikr_counter_progress_permille(counter) / 10));
-            }
+            // "Sets" = completed passes of this profile (stored as `rounds`).
+            snprintf(
+                text,
+                sizeof(text),
+                "%lu%%  Sets: %lu",
+                (unsigned long)(dhikr_counter_progress_permille(counter) / 10),
+                (unsigned long)counter->rounds);
             break;
         }
         progress = (float)dhikr_counter_progress_permille(counter) / 1000.0f;
