@@ -1,7 +1,7 @@
 # Screenshots
 
 All images are unmodified qFlipper exports from a real Flipper Zero running Flipper Dhikr
-v1.0.3 on Momentum firmware, taken on 2026-11-23. They were only renamed to describe what
+v1.0.3, taken on 2026-11-23. They were only renamed to describe what
 they show, so their content and SHA-256 checksums are those of the original files.
 Check them with `python3 scripts/check_screenshots.py` (PNG, 512×256, only black `#000000`
 and orange `#FE8A2C`).

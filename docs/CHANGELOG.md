@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [1.0.3] – 2026-11-23
 
-Menus and navigation only. No new statistics, same settings format.
+Menus, navigation and a new app icon. No new statistics, same settings format.
 
 ### Changed
 - **Main menu:** `Start Counting`, `Dhikr Profiles`, `Feedback Settings`, `About`.
@@ -29,6 +29,9 @@ Menus and navigation only. No new statistics, same settings format.
 ### Added
 - **New app icon:** a crescent with a small five-pointed star (10×10, 1-bit), generated
   from a fixed pixel matrix by `scripts/generate_icon.py` (also validates the file).
+- **Screenshots:** unmodified qFlipper captures of v1.0.3 in `screenshots/` (README gallery
+  and Apps Catalog set), checked by `scripts/check_screenshots.py`.
+- **Apps Catalog texts:** `docs/catalog-description.md` and `docs/catalog-changelog.md`.
 - **View Progress** (read-only) per profile: `Current: 15/100`, `Completed Sets: 4`,
   `Target: 100`. Uses the already stored rounds; no new data.
 - **Reset Progress** per profile: dialog `Reset progress?` with the profile name and its

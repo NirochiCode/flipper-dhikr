@@ -19,6 +19,11 @@ Cause: that reset always used the active profile, not the profile highlighted in
 (see CHANGELOG). This build replaces it with Reset Progress per profile. No other results of
 that run were recorded, so the table below starts empty.
 
+**Screenshot evidence (2026-11-23):** qFlipper screenshots of the current build (see
+`screenshots/`) show the expected screens for V2 (first three entries), V5, V6, V11, V12,
+V15 (dialog with No selected), V26 and the Add Profile flow. They show the screens only; the
+rows stay open (☐) until the tests, including behaviour, saving and restart, are confirmed.
+
 Install `dist/v1.0.3/momentum-mntm-012/flipper_dhikr.fap`. Keep a copy of
 `SD:/apps_data/flipper_dhikr/settings.txt` first. Rows marked ★ are the priority set.
 

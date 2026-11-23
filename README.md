@@ -9,12 +9,29 @@ completed set and starts again at 0. Mistakes can be undone. Built-in profiles a
 ones keep independent counts, and everything is stored on the SD card.
 
 > **Status: v1.0.3 – not yet fully validated on hardware.**
-> v1.0.3 changes menus and navigation only: a shorter main menu, a details menu per profile
-> (View Progress, Edit Target, Reset Progress, …) and a simpler counter screen. All 73 host
-> unit tests pass and both builds (Momentum mntm-012, official 1.5.1) complete without
-> warnings, but the current v1.0.3 build has not been tested on a Flipper Zero yet.
+> v1.0.3 brings a shorter main menu, a details menu per profile (View Progress, Edit Target,
+> Reset Progress, …), a simpler counter screen and a new app icon. All 74 host unit tests pass
+> and both builds (Momentum mntm-012, official 1.5.1) complete without warnings. The
+> screenshots below were taken with qFlipper on a real Flipper Zero, but the v1.0.3 hardware
+> checklist has not been completed yet.
 >
-> The last hardware-validated release is **v1.0.2** (Momentum, 9/9 prioritised tests passed).
+> The latest published and hardware-validated release is **v1.0.2** (Momentum, 9/9 prioritised
+> tests passed).
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Counter at 30/33 with 90 %](screenshots/catalog/01-counter.png) | ![Target reached at 33/33](screenshots/catalog/02-target-reached.png) |
+| Counter | Target reached, automatic restart |
+| ![Dhikr Profiles list](screenshots/catalog/03-dhikr-profiles.png) | ![Profile details of SubhanAllah](screenshots/catalog/04-profile-details.png) |
+| Dhikr Profiles (`*` = active) | Profile details |
+| ![View Progress](screenshots/catalog/05-view-progress.png) | ![Reset progress confirmation](screenshots/catalog/06-reset-confirmation.png) |
+| View Progress with completed sets | Reset Progress confirmation (No pre-selected) |
+| ![Counter Feedback switches](screenshots/catalog/07-counter-feedback.png) | ![Target Feedback switches](screenshots/catalog/08-target-feedback.png) |
+| Counter Feedback | Target Feedback |
+
+Unmodified qFlipper captures; more in [screenshots/](screenshots/README.md).
 
 ---
 
@@ -30,7 +47,8 @@ ones keep independent counts, and everything is stored on the SD card.
 | **View Progress**         | Per profile, read-only: current count, target and completed sets. Works for any profile, not only the active one.                                                                                                                                                              |
 | **Safe reset / delete**   | **Reset Progress** per profile (count and sets to 0) and **Delete Profile**, each with a dialog that names the profile and has **No** pre-selected. Back cancels.                                                                                                              |
 | **Feedback**              | Four independent switches: **Counter** vibration/sound (short tick per count) and **Target** vibration/sound (distinct pattern plus a green LED when a set is complete). Default: quiet counting, vibration + sound at the target. Respects the system settings (see below). |
-| **Persistence**           | Versioned, CRC-protected settings file with crash-safe writes and automatic migration of v1.0 data.                                                                                                                                                                            |
+| **Persistence**           | Versioned, CRC-protected settings file with crash-safe writes. v1.0 / v1.0.1 data is migrated automatically; v1.0.2 data is used as-is.                                                                                                                                       |
+| **App icon**              | 10×10 crescent with a five-pointed star, shown in **Apps → Tools**.                                                                                                                                                                                                            |
 
 The default profiles are plain, configurable counters. The app makes no claim about how often
 any dhikr should be recited.
@@ -47,9 +65,8 @@ Flipper Dhikr
   About
 ```
 
-Back on the main menu exits the app. Up to v1.0.2 there were also `Target Settings` and
-`Reset Counter`, which always applied to the active profile. Both now live in the details menu
-of each profile, so it is always clear which profile they change.
+Back on the main menu exits the app. Targets and resets are managed per profile in its
+details menu, so it is always clear which profile they change.
 
 **Counter screen**
 
@@ -71,8 +88,7 @@ and `Muted` when stealth mode is silencing the feedback.
 ```
 
 The screen shows the profile name, the count, the target and a progress bar with the
-percentage (as in v1.0.2). Completed sets are not shown here, to keep it simple; see
-**View Progress**.
+percentage. Completed sets are shown in **View Progress**, not on the counter screen.
 
 **What you see at the target (example: target 33):** `32/33` → OK → **`33/33 Target
 reached!`** (about 1 s, signal plays once) → `0/33`. One completed set is recorded. A press
@@ -220,6 +236,11 @@ make -C tests     # 74 host unit tests, AddressSanitizer + UBSan
 
 ## Install on the Flipper Zero
 
+Prebuilt `.fap` files for published versions are attached to the
+[GitHub releases](https://github.com/NirochiCode/flipper-dhikr/releases) (one per firmware).
+Until v1.0.3 is released, build it yourself as shown above. A submission to the official
+Flipper Apps Catalog is being prepared.
+
 Choose **one** of these options:
 
 1. **qFlipper**: copy `dist/v1.0.3/momentum-mntm-012/flipper_dhikr.fap` to
@@ -258,12 +279,13 @@ CRC-32 checksum.
 | v1.0 features                         | ✅ tested on hardware (Momentum) by the user                                          |
 | v1.0.1 features                       | ✅ the 9 prioritised hardware tests passed (Momentum)                                 |
 | v1.0.2 independent feedback           | ✅ 9/9 prioritised hardware tests passed (Momentum); extended checklist still open    |
-| v1.0.3 menu, profile details, reset   | ⏳ **current build not yet tested on hardware** (see docs/HARDWARE_TESTS.md)          |
+| v1.0.3 menu, profile details, reset   | ⏳ hardware checklist open (see docs/HARDWARE_TESTS.md); screens captured on a device |
+| v1.0.3 app icon                       | ✅ 10×10, 1-bit, pixel-checked (`scripts/generate_icon.py --check`); ⏳ device check |
 | Build, Momentum `mntm-012` (API 87.1) | ✅ no warnings, APPCHK passed                                                         |
 | Build, official `1.5.1` (API 88.2)    | ✅ no warnings, APPCHK passed                                                         |
 | Host unit tests                       | ✅ 74/74 (ASan + UBSan), including all 16 switch combinations                         |
 | Static analysis                       | ✅ clang `--analyze` (logic) and GCC `-fanalyzer` (all firmware sources): no findings |
-| Screenshots                           | none yet; list in docs/SCREENSHOT_CHECKLIST.md (taken on a real device only)          |
+| Screenshots                           | ✅ 17 qFlipper captures of v1.0.3 (`scripts/check_screenshots.py`: 512×256, 2 colours) |
 
 ## Known limitations
 
@@ -289,9 +311,11 @@ See [docs/ROADMAP.md](docs/ROADMAP.md).
 application.fam      app manifest (appid flipper_dhikr)
 src/, include/       C sources and headers (logic, storage, feedback, views, scenes)
 assets/              10x10 app icon (crescent and star, see scripts/generate_icon.py)
+screenshots/         unmodified qFlipper screenshots (catalog/ = Apps Catalog set)
 tests/               host unit tests (make -C tests)
-scripts/build.sh     labelled builds for Momentum and official SDKs
-docs/                ARCHITECTURE, ROADMAP, CHANGELOG, HARDWARE_TESTS, SCREENSHOT_CHECKLIST
+scripts/             build.sh (Momentum + official builds), icon and screenshot checks
+docs/                ARCHITECTURE, ROADMAP, CHANGELOG, HARDWARE_TESTS, SCREENSHOT_CHECKLIST,
+                     catalog-description.md, catalog-changelog.md (Apps Catalog texts)
 ```
 
 ## License

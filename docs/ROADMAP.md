@@ -26,10 +26,12 @@ knowledgeable people before release.
 - Profile details: View Progress, Edit Target (N), Rename, Reset Progress, Delete
 - Per-profile reset by id with a named confirmation
 - Counter screen with percentage and `Target reached!`; completed sets in View Progress
-- Screenshot checklist; real screenshots after the hardware test
+- New crescent-and-star app icon
+- qFlipper screenshots (9 of 10 checklist shots) ✅
+- Official Flipper Apps Catalog submission (catalog version 1.0), after the hardware test
 
 ## v1.1 – Quality of life
-- Real screenshots and the remaining extended hardware checklist
+- Remaining extended hardware checklist
 - Optional "keep backlight on" while counting
 - Optional per-profile feedback override
 - Reorder custom profiles
