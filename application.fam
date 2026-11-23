@@ -14,5 +14,6 @@ App(
     # FAP metadata only stores major.minor; the full version (1.0.3) is DHIKR_APP_VERSION.
     fap_version="1.0",
     fap_description="Digital tasbih counter with multiple dhikr profiles, targets, persistent progress and vibration/sound feedback.",
-    fap_author="Flipper Dhikr contributors",
+    fap_author="NirochiCode",
+    fap_weburl="https://github.com/NirochiCode/flipper-dhikr",
 )
