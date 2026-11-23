@@ -22,9 +22,10 @@ knowledgeable people before release.
 - Settings format v3 with migration from v1/v2
 
 ## v1.0.3 – Menu and UX (hardware test pending)
-- Main menu without `Target Settings`; targets are edited per profile (Edit Target)
-- Clearer profile edit menu: Edit Target (N), Rename Profile, Delete Profile
-- "Sets" instead of "Rounds", `Set N complete!` at the target
+- Main menu: Start Counting, Dhikr Profiles, Feedback Settings, About
+- Profile details: View Progress, Edit Target (N), Rename, Reset Progress, Delete
+- Per-profile reset by id with a named confirmation
+- Counter screen with percentage and `Target reached!`; completed sets in View Progress
 - Screenshot checklist; real screenshots after the hardware test
 
 ## v1.1 – Quality of life

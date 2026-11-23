@@ -4,65 +4,76 @@ Install the build that matches your firmware (see README), then work through the
 the firmware version and the results in this file. Screenshots: see
 [SCREENSHOT_CHECKLIST.md](SCREENSHOT_CHECKLIST.md).
 
-Since v1.0.3 the UI says **Sets** where older sections below say *rounds*, and the target
-message is `Set N complete!` instead of `Target reached!`. The older sections are kept as they
-were tested.
+Since v1.0.3 the UI says **sets** where older sections below say *rounds*, `Reset Counter` is
+now `Reset Progress` in each profile's details, and targets are edited there too. The older
+sections are kept as they were tested.
 
-## v1.0.3 – menu and UX (NOT yet validated on hardware)
+## v1.0.3 – menu, profile details and reset (NOT yet validated on hardware)
 
-**Status: not tested on a Flipper Zero yet.** Host unit tests: 62/62. Builds: Momentum
-`mntm-012` and official `1.5.1`, no warnings.
+**Status: the current v1.0.3 build has not been tested on a Flipper Zero.** Host unit tests:
+73/73. Builds: Momentum `mntm-012` and official `1.5.1`, no warnings.
 
-Install `dist/v1.0.3/momentum-mntm-012/flipper_dhikr.fap` over v1.0.2. Keep a copy of
+An earlier v1.0.3 build (with `Reset Counter` in the main menu and `Sets: N` on the counter
+screen) was tried on Momentum. The user observed that a reset only changed the active profile.
+Cause: that reset always used the active profile, not the profile highlighted in the list
+(see CHANGELOG). This build replaces it with Reset Progress per profile. No other results of
+that run were recorded, so the table below starts empty.
+
+Install `dist/v1.0.3/momentum-mntm-012/flipper_dhikr.fap`. Keep a copy of
 `SD:/apps_data/flipper_dhikr/settings.txt` first. Rows marked ★ are the priority set.
 
-### Update
+Suggested starting state for V9–V16: SubhanAllah active with about 20/33 and 2 sets;
+a custom profile "Istighfar" (target 100) with about 15/100 and some sets.
+
+### Update and main menu
 
 | # | ★ | Test | Expected | Result |
 |---|---|---|---|---|
-| V1 | ★ | Install v1.0.3 over v1.0.2 with existing data | All profiles, names, counts, completed rounds (now shown as Sets), targets, active profile and the four feedback switches are unchanged; no new `.bak` file; `settings.txt` still has `version=3` | ☐ |
-| V2 | | About | Shows `Flipper Dhikr v1.0.3`, a "Sets" and a "Profiles" section | ☐ |
+| V1 | ★ | Install over the existing data (v1.0.2 or the earlier v1.0.3 build) | All profiles, names, counts, completed sets, targets, active profile and feedback switches unchanged; no new `.bak` file; `settings.txt` still `version=3` | ☐ |
+| V2 | ★ | Open the app | Menu: `Start Counting`, `Dhikr Profiles`, `Feedback Settings`, `About`; **no** `Target Settings`, **no** `Reset Counter`; fully readable | ☐ |
+| V3 | | Open each entry, then Back | Returns to the main menu; Back on the main menu exits | ☐ |
+| V4 | | About | `Flipper Dhikr v1.0.3`; Sets and Profiles sections mention the details menu | ☐ |
 
-### Main menu
-
-| # | ★ | Test | Expected | Result |
-|---|---|---|---|---|
-| V3 | ★ | Open the app | Menu: `Start Counting`, `Dhikr Profiles`, `Feedback Settings`, `Reset Counter`, `About`; **no** `Target Settings`; all readable, scrolling works | ☐ |
-| V4 | | Open each entry, then Back | Returns to the main menu each time; Back on the main menu exits | ☐ |
-
-### Profiles and Edit Target
+### Counter screen
 
 | # | ★ | Test | Expected | Result |
 |---|---|---|---|---|
-| V5 | ★ | Dhikr Profiles → OK on another profile | `*` moves at once, list stays open | ☐ |
-| V6 | ★ | Hold OK on a profile that is **not** active | Header = that profile's name; `Edit Target (N)`, plus `Rename Profile` / `Delete Profile` for custom profiles | ☐ |
-| V7 | ★ | … → `Edit Target` → `99 times` | Back in the same edit menu showing `Edit Target (99)`; Back → list: `*` still on the previously active profile; that profile's count unchanged | ☐ |
-| V8 | ★ | … → `Edit Target` → `Custom value...` → 100 | Back in the edit menu with `Edit Target (100)` (not the main menu); Back → list → Back → main menu | ☐ |
-| V9 | | Edit Target on the **active** profile with count 10 and Sets 2, then Start Counting | Count 10, Sets 2, new target shown | ☐ |
-| V10 | ★ | Hold OK (or Edit Profiles...) on SubhanAllah / Alhamdulillah / Allahu Akbar | Only `Edit Target (N)` | ☐ |
-| V11 | | Edit Profiles... → custom profile → Rename Profile; Delete Profile (No, then Yes) | Rename works; delete asks with No pre-selected and only deletes on Yes | ☐ |
-| V12 | | Add profiles until 10+ exist | List scrolls; `+ Add Profile` and `Edit Profiles...` reachable at the end | ☐ |
-| V13 | | Exit after a target change, reopen | New target kept | ☐ |
+| V5 | ★ | Counter at 29/33 | Name, large `29`, `/33`, bar with `87%`; **no** `Sets` text; `▼Undo` and `(+1)` at the bottom | ☐ |
+| V6 | ★ | Count 32 → 33 | `33/33` and `Target reached!` for ~1 s, target feedback once, then `0/33` and `0%` | ☐ |
+| V7 | | Hold Down right after a completed set | `32/33`, `Set undone`; View Progress shows one set fewer | ☐ |
+| V8 | | Press OK quickly during `Target reached!`; Left/Right; Back | Every press counts once, UI never freezes; profile switch and Back as before | ☐ |
 
-### Sets and completion message (target 33; feedback default Counter OFF / Target ON)
+### Profile details and View Progress
 
 | # | ★ | Test | Expected | Result |
 |---|---|---|---|---|
-| V14 | | Counter at 0/33 and at ~30/33 | Count large and readable; bar text `0%  Sets: 0` / `90%  Sets: 0` | ☐ |
-| V15 | ★ | Count 32 → 33 | `33/33` with `Set 1 complete!` for ~1 s (text fully inside the bar), target feedback once, then `0/33` and `Sets: 1` | ☐ |
-| V16 | | Complete a second set | `Set 2 complete!`, then `Sets: 2` | ☐ |
-| V17 | ★ | Hold Down right after a completed set | `32/33`, `Set undone`, Sets back by 1 | ☐ |
-| V18 | | Press OK quickly during `Set N complete!` | Every press counts once, the message closes, UI never freezes | ☐ |
-| V19 | ★ | Exit the app and reopen | Sets and count kept per profile | ☐ |
-| V20 | | Reset Counter | Dialog shows `Count N, sets M`, No pre-selected; Yes clears count and sets of the active profile only | ☐ |
+| V9 | ★ | Dhikr Profiles → OK on a profile | `*` moves at once, list stays open | ☐ |
+| V10 | ★ | Highlight Istighfar (not active), hold OK | Header `Istighfar`; `View Progress`, `Edit Target (100)`, `Rename Profile`, `Reset Progress`, `Delete Profile`; all reachable by scrolling | ☐ |
+| V11 | ★ | Hold OK on SubhanAllah / Alhamdulillah / Allahu Akbar | `View Progress`, `Edit Target (N)`, `Reset Progress` only | ☐ |
+| V12 | ★ | Istighfar → View Progress | `Istighfar`, `Current: 15/100`, `Completed Sets: N`, `Target: 100`, matching the data; nothing changes on OK/Up/Down; Back → Istighfar details; `*` still on SubhanAllah | ☐ |
+| V13 | | Long custom name (16 characters) → View Progress | Name fully readable (smaller font) | ☐ |
+| V14 | | Istighfar → Edit Target → 99 / Custom 100 | Back in Istighfar's details with the new value; active profile unchanged | ☐ |
+
+### Reset Progress
+
+| # | ★ | Test | Expected | Result |
+|---|---|---|---|---|
+| V15 | ★ | Istighfar → Reset Progress | Dialog `Reset progress?`, `Istighfar`, `15/100, sets N`; **No** highlighted | ☐ |
+| V16 | ★ | … → OK on No; again → Back | Nothing changes (check View Progress) | ☐ |
+| V17 | ★ | … → Right → OK (Yes) | Back in Istighfar's details; View Progress: `Current: 0/100`, `Completed Sets: 0`, `Target: 100`; name unchanged | ☐ |
+| V18 | ★ | After V17: Start Counting | Still SubhanAllah with its old count (e.g. 20/33); its View Progress still shows its sets | ☐ |
+| V19 | ★ | Reset the **active** profile right after completing a set, then Start Counting and hold Down | Count 0, `Nothing to undo`; no sets come back | ☐ |
+| V20 | ★ | Exit the app after a reset, reopen | Reset values kept; other profiles unchanged | ☐ |
+| V21 | | Count in the reset profile up to its target | Counts normally from 1; one set recorded at the target | ☐ |
 
 ### Unchanged behaviour (spot checks)
 
 | # | ★ | Test | Expected | Result |
 |---|---|---|---|---|
-| V21 | | Counter ON / Target OFF | Tick on counts 1–32, silent at 33, `Set 1 complete!` shown | ☐ |
-| V22 | | Stealth mode on | `Muted` on the counter screen | ☐ |
-| V23 | | Left/Right on the counter screen | Switches profile, each with its own count and Sets | ☐ |
+| V22 | | Rename and Delete a custom profile | Work as in v1.0.2; delete asks, No pre-selected | ☐ |
+| V23 | | Counter ON / Target OFF | Tick on counts 1–32, silent at 33, `Target reached!` shown | ☐ |
+| V24 | | Stealth mode on | `Muted` on the counter screen | ☐ |
+| V25 | | 10+ profiles | Profile list scrolls; `+ Add Profile` and `Edit Profiles...` reachable | ☐ |
 
 Firmware tested: _______  Date: _______
 

@@ -29,9 +29,9 @@ tested on the host. Code that talks to the SDK is a thin layer around it.
 | Module | Responsibility |
 |---|---|
 | `counter` | `DhikrCounter {count, target, rounds}` plus the undo information that is not saved. Increment completes a round at the target; undo; reset; normalisation of v1.0 counts. |
-| `counter_input` | Maps keys to actions (`OK short` → +1, `Down long` → undo, `Left/Right short` → profile). Banner timing. `dhikr_counter_apply()` applies an action to the state and returns which feedback to play and whether to save. The counter scene is only a thin wrapper around it. |
-| `profiles` | `DhikrProfile` (stable `id`, name, counter, `builtin`) and `DhikrState` (≤ 16 profiles, active index, four feedback switches, `next_custom_id`). Add, rename, delete, `dhikr_state_set_target(state, index, target)` (any profile, active unchanged), name check (valid and unique), list labels. |
-| `menu` | Main menu entries and labels; which edit actions a profile allows (built-ins: Edit Target only) and their labels. Pure, so the menu structure is unit-tested. |
+| `counter_input` | Maps keys to actions (`OK short` → +1, `Down long` → undo, `Left/Right short` → profile). Banner timing and the progress-bar text (`dhikr_counter_status_text`: percentage or banner message). `dhikr_counter_apply()` applies an action to the state and returns which feedback to play and whether to save. The counter scene is only a thin wrapper around it. |
+| `profiles` | `DhikrProfile` (stable `id`, name, counter, `builtin`) and `DhikrState` (≤ 16 profiles, active index, four feedback switches, `next_custom_id`). Add, rename, delete, `dhikr_state_set_target(state, index, target)` and `dhikr_state_reset_profile(state, id)` (any profile, active unchanged), name check (valid and unique), list labels. |
+| `menu` | Main menu entries and labels; which profile-details actions a profile allows (all: View Progress, Edit Target, Reset Progress; custom also Rename, Delete) and their labels; the View Progress text. Pure, so the menu structure is unit-tested. |
 | `confirm` | [No]/[Yes] state machine used by reset and delete. Starts at **No**. |
 | `settings_codec` | Serialises format v3 and parses v1, v2 and v3 (with migration). CRC-32. |
 | `storage` | Load/save policy on top of `DhikrFileIo`: atomic writes, skipping unchanged writes, backups, migration hand-off. |
@@ -50,14 +50,15 @@ MainMenu ─┬─ Counter                         (OK +1, hold Down undo, Left/
           │            ├─ + Add ─ ProfileName ─ TargetCustom(new) ─► back to Profiles
           │            └─ Edit Profiles... ─ ProfileEdit ─┐
           │                                               ▼
-          │                         ProfileActions ─┬─ Target (33 / 99 / Custom...) ─► ProfileActions
-          │                         (edit_profile)  │     └─ TargetCustom(edit) ─► ProfileActions
-          │                                         ├─ ProfileName(rename)
-          │                                         └─ ProfileDelete (confirm) ─► back to list
+          │                  ProfileActions ─┬─ ProfileProgress (read-only) ─► Back
+          │              ("profile details",  ├─ Target (33 / 99 / Custom...) ─► ProfileActions
+          │               edit_profile_id)    │     └─ TargetCustom(edit) ─► ProfileActions
+          │                                   ├─ ProfileName(rename)          (custom only)
+          │                                   ├─ ProfileReset (confirm) ─► ProfileActions
+          │                                   └─ ProfileDelete (confirm) ─► back to list (custom only)
           ├─ Feedback ─┬─ FeedbackEvent(count)   (Vibration / Sound / Preview)
           │            ├─ FeedbackEvent(target)
           │            └─ Notice(help)
-          ├─ Reset (confirm)
           └─ About
 Notice: generic message screen (start-up storage problems, profile limit, help)
 ```
@@ -66,20 +67,40 @@ The shared input screens (`ProfileName`, `TargetCustom`) take their purpose from
 `app->name_mode` and `app->target_mode`, so one scene serves several flows without duplicated
 code.
 
-Since v1.0.3 the main menu has no `Target Settings` entry. The `Target` scene (presets) is
-reached only from `ProfileActions` and always edits `app->edit_profile`, the profile that was
-explicitly chosen in the list, never implicitly the active one. Choosing a value saves at once
-and returns to `ProfileActions`, whose `Edit Target (N)` label shows the new value.
+Since v1.0.3 the main menu has neither `Target Settings` nor `Reset Counter`. Both used the
+active profile implicitly, which is not necessarily the one highlighted in the profile list.
+
+**Selected vs. active profile.** `state.active` is the profile the counter uses (`*`).
+`app->edit_profile_id` is the profile chosen in the list (hold OK or Edit Profiles...), set via
+`dhikr_app_set_edit_profile()`. Every details screen (`ProfileActions`, `ProfileProgress`,
+`ProfileReset`) re-resolves the index from that id with `dhikr_app_resolve_edit_profile()`,
+and the reset is applied by id. Nothing in the details changes `state.active`.
+
+- `Target` (presets) saves at once and returns to `ProfileActions`, whose `Edit Target (N)`
+  label shows the new value.
+- `ProfileProgress` is a `Widget` with the name (small font for names longer than 13
+  characters) and three lines from `dhikr_progress_text()`. It has no input handling of its
+  own; Back returns to `ProfileActions`.
+- `ProfileReset` uses the confirm view (`Reset progress?`, name, `count/target, sets N`, No
+  pre-selected). Yes → `dhikr_state_reset_profile(id)` (count, rounds, undo cleared), save,
+  back to `ProfileActions`.
 
 ## Key decisions
 
 ### "Sets" in the UI, `rounds` in the data (v1.0.3)
-The UI calls a completed pass a **set** (`Sets: N`, `Set N complete!`, `Set undone`). The
-counter field, the settings key `profile.<id>.rounds` and format v3 are unchanged, so no
-migration is needed and v1.0.2 files load byte-for-byte. `DhikrBanner.set_number` carries the
-number of the set just completed, so the banner does not depend on later state changes.
-Sets are a plain tally per profile; they are never multiplied by the target, so a later target
-change does not alter their meaning.
+The UI calls a completed pass a **set** (`Completed Sets` in View Progress, `Set undone`,
+dialogs). The counter screen shows only the percentage and `Target reached!`, as in v1.0.2.
+The counter field, the settings key `profile.<id>.rounds` and format v3 are unchanged, so no
+migration is needed and v1.0.2 files load byte-for-byte. Sets are a plain tally per profile;
+they are never multiplied by the target, so a later target change does not alter their
+meaning.
+
+### Reset (v1.0.3)
+`dhikr_counter_reset` sets count and rounds to 0 and clears the undo information, which lives
+in each profile's `DhikrCounter`. There is no global undo state, so a reset can never be
+undone, for the active profile or any other. The reset is triggered only from a profile's
+details and applied by id. A failed save keeps the change marked dirty (retry by autosave or
+on exit); the file on the card stays the previous complete version (atomic temp-file write).
 
 ### Rounds instead of counting past the target (v1.0.1)
 The increment that reaches the target (`count + 1 >= target`) sets `count = 0` and
@@ -210,14 +231,18 @@ crc32=1A2B3C4D
 
 ## Testing and checks
 
-- `tests/test_main.c`: 62 tests (including all 16 feedback switch combinations, each with a
-  simulated round and a save/reload, and the v1.0.3 menu/UX tests U1–U12) against the pure modules with an in-memory fake
+- `tests/test_main.c`: 73 tests (including all 16 feedback switch combinations, each with a
+  simulated round and a save/reload, and the v1.0.3 tests U1–U12 and P1–P11) against the
+  pure modules with an in-memory fake
   `DhikrFileIo`, built with `-Wall -Wextra -Werror -Wconversion` and ASan/UBSan.
-  Requirements R1–R20, F1–F13 and U1–U12 are marked in the source.
+  Requirements R1–R20, F1–F13, U1–U12 and P1–P11 are marked in the source. Screens and
+  scene transitions are not executed on the host; they are covered by the hardware checklist.
 - The tests were checked with intentionally broken code: breaking undo or rounds makes the
   related tests fail. For v1.0.3: making a target edit activate the profile, putting
-  `Target Settings` back in the main menu, allowing Rename on built-ins and dropping the set
-  number from the banner each make the matching tests fail.
+  `Target Settings` back in the main menu, allowing Rename on built-ins, resetting the active
+  instead of the chosen profile, keeping the sets or the undo information on reset, showing
+  `Sets` in the counter bar and dropping Reset Progress for built-ins each make the matching
+  tests fail.
 - GCC `-fanalyzer` was run over every firmware source with the real uFBT compile flags, and
   clang `--analyze` over the logic modules: no findings.
 - Hardware behaviour: `docs/HARDWARE_TESTS.md`.

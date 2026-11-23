@@ -6,42 +6,59 @@ All notable changes to this project are documented here. The format follows
 
 ## [1.0.3] – 2026-11-23
 
-Menu and wording only. No new features, same settings format.
+Menus and navigation only. No new statistics, same settings format.
 
 ### Changed
-- **Main menu:** `Target Settings` removed. The menu is now `Start Counting`,
-  `Dhikr Profiles`, `Feedback Settings`, `Reset Counter`, `About`. Every profile already has
-  its own target, and the old entry only ever changed the active profile.
-- **Profile edit menu** (hold OK on a profile, or `Edit Profiles...`): `Edit Target (N)`,
-  `Rename Profile`, `Delete Profile`. Built-in profiles still only offer `Edit Target`.
-- **Edit Target** opens the familiar 33 / 99 / custom choice for exactly the profile being
-  edited. The value is saved at once and the app returns to that profile's edit menu
-  (previously the custom value returned to the profile list or the main menu). The active
-  profile, the count and the completed sets are not changed.
-- **"Sets" instead of "Rounds"** on screen: the counter shows `Sets: N` (also `Sets: 0`), the
-  target message reads `Set N complete!` (previously `Target reached!`), undo of a completed
-  set shows `Set undone`, and the reset/delete dialogs and the About page use "sets".
-- About page: short explanation of sets and of hold OK to edit profiles. Version 1.0.3
-  (`fap_version` stays `1.0`, the manifest only supports major.minor).
+- **Main menu:** `Start Counting`, `Dhikr Profiles`, `Feedback Settings`, `About`.
+  `Target Settings` and `Reset Counter` were removed. Both always applied to the active
+  profile; they are now part of each profile's details.
+- **Profile details** (hold OK on a profile, or `Edit Profiles...`), header = profile name:
+  `View Progress`, `Edit Target (N)`, `Rename Profile`, `Reset Progress`, `Delete Profile`.
+  Built-in profiles offer View Progress, Edit Target and Reset Progress. Opening or using the
+  details never changes the active profile.
+- **Edit Target** opens the familiar 33 / 99 / custom choice for exactly that profile, saves
+  at once and returns to its details.
+- **Counter screen:** the progress bar shows the percentage again (as in v1.0.2, without the
+  former `Rounds: N`). At the target it shows `33/33 Target reached!` for about 1 s, records
+  one completed set and restarts at 0, as before.
+- Wording: a completed pass is called a **set** (`Completed Sets`, `Set undone`, dialogs,
+  About page).
+
+### Added
+- **View Progress** (read-only) per profile: `Current: 15/100`, `Completed Sets: 4`,
+  `Target: 100`. Uses the already stored rounds; no new data.
+- **Reset Progress** per profile: dialog `Reset progress?` with the profile name and its
+  count/target/sets, **No** pre-selected, Back cancels. Yes sets count and sets of that profile
+  to 0, clears its undo information, keeps target, name and id, leaves all other profiles and
+  the active profile unchanged, saves at once and returns to the same profile's details.
+
+### Fixed
+- **Reset changed the wrong profile from the user's point of view.** Investigation of the
+  previous build: the reset logic itself was correct. It set count **and** sets to 0 and
+  cleared undo. But the only reset, `Reset Counter` in the main menu, always acted on the
+  *active* profile, not on the profile highlighted in the profile list. Highlighting a profile
+  does not activate it, so a reset could hit a different profile than intended. The reset now
+  exists only inside a profile's details and is applied by the profile's stable id
+  (`dhikr_state_reset_profile`), never through the active-profile state.
 
 ### Unchanged
 - Settings format v3: completed sets are still stored as `profile.<id>.rounds`. A file
-  written by v1.0.2 is read as-is and written back byte-identical (tested). No migration,
-  no new backup file.
+  written by v1.0.2 is read as-is and written back byte-identical (tested). No migration.
 - Counting, automatic restart, undo, the four feedback switches, stealth handling, profile
   limits and all confirmations.
 
 ### Tests and build
-- 62 host unit tests (previously 50). New: U1–U12 for the main menu, Edit Target per
-  profile, editing an inactive profile, built-in protection, sets persistence, the set
-  banner with undo, target changes keeping counts and sets, v1.0.2 file compatibility and
-  all 16 feedback combinations.
-- GCC `-fanalyzer` (28 firmware sources) and clang `--analyze` (logic): no findings.
+- 73 host unit tests (50 in v1.0.2). New: U1–U12 (menus, Edit Target, v1.0.2 file
+  compatibility) and P1–P11 (profile details, View Progress, per-profile reset including
+  inactive profiles, undo after reset, cancel, persistence, save failure, percentage text,
+  `Target reached!`). Checked with intentionally broken code (5 variants, all detected).
+- GCC `-fanalyzer` (29 firmware sources) and clang `--analyze` (logic): no findings.
 - Momentum `mntm-012` (API 87.1) and official `1.5.1` (API 88.2): build without warnings,
   APPCHK passed. Output in `dist/v1.0.3/`.
 
 ### Hardware
-- **v1.0.3 is not yet validated on hardware.**
+- **The current v1.0.3 build is not yet validated on hardware.** An earlier v1.0.3 build was
+  tried on the device; that test led to the reset and counter-screen changes above.
 
 ## [1.0.2] – 2026-11-22
 

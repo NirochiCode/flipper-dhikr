@@ -3,16 +3,16 @@
 A digital **tasbih counter** for the [Flipper Zero](https://flipperzero.one/), written in C
 as a native `.fap` application.
 
-Count with the OK button in sets: when the target (33, 99 or any value from 1 to 9999) is
-reached, the app shows **"Set 1 complete!"**, gives a distinct vibration/sound signal, counts
-the completed set and starts again at 0. Mistakes can be undone. Built-in profiles and up to 13 custom
+Count with the OK button: when the target (33, 99 or any value from 1 to 9999) is reached,
+the app shows **"Target reached!"**, gives a distinct vibration/sound signal, records one
+completed set and starts again at 0. Mistakes can be undone. Built-in profiles and up to 13 custom
 ones keep independent counts, and everything is stored on the SD card.
 
-> **Status: v1.0.3 – not yet validated on hardware.**
-> v1.0.3 only changes menus and wording (simpler main menu, target editing per profile,
-> "Sets" instead of "Rounds"). All 62 host unit tests pass and both builds (Momentum
-> mntm-012, official 1.5.1) complete without warnings, but v1.0.3 has not been tested on a
-> Flipper Zero yet.
+> **Status: v1.0.3 – not yet fully validated on hardware.**
+> v1.0.3 changes menus and navigation only: a shorter main menu, a details menu per profile
+> (View Progress, Edit Target, Reset Progress, …) and a simpler counter screen. All 73 host
+> unit tests pass and both builds (Momentum mntm-012, official 1.5.1) complete without
+> warnings, but the current v1.0.3 build has not been tested on a Flipper Zero yet.
 >
 > The last hardware-validated release is **v1.0.2** (Momentum, 9/9 prioritised tests passed).
 
@@ -22,12 +22,13 @@ ones keep independent counts, and everything is stored on the SD card.
 
 |                           |                                                                                                                                                                                                                                                                                |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Tasbih counter**        | Large count display, target, progress bar, completed sets. OK adds exactly one.                                                                                                                                                                                                |
-| **Sets (auto restart)**   | A set is one complete pass up to the target. The count that reaches the target completes the set: "Set N complete!" shows for about 1 s, the completion signal plays once, `Sets` goes up and the count restarts at 0.                                                         |
+| **Tasbih counter**        | Large count display, target, progress bar with percentage. OK adds exactly one.                                                                                                                                                                                                |
+| **Sets (auto restart)**   | A set is one complete pass up to the target. The count that reaches the target completes the set: "Target reached!" shows for about 1 s, the completion signal plays once, one set is recorded and the count restarts at 0. Completed sets are shown in **View Progress**.     |
 | **Undo**                  | Hold **Down** to take back the last count (never below 0). Directly after a completed set, undo restores that set.                                                                                                                                                             |
 | **Targets**               | 33, 99 or a custom value 1–9999 per profile, set under **Dhikr Profiles → hold OK → Edit Target**. Changing the target never clears the count or the completed sets.                                                                                                           |
-| **Profiles**              | SubhanAllah, Alhamdulillah, Allahu Akbar (built-in, cannot be renamed or deleted), Custom Dhikr, plus your own profiles. Add, rename and delete custom profiles (max. 16 profiles in total).                                                                                   |
-| **Safe reset / delete**   | `Reset counter?` and `Delete profile?` dialogs with **No** pre-selected. Back cancels.                                                                                                                                                                                         |
+| **Profiles**              | SubhanAllah, Alhamdulillah, Allahu Akbar (built-in, cannot be renamed or deleted), Custom Dhikr, plus your own profiles. Add, rename and delete custom profiles (max. 16 profiles in total). Each profile has a details menu.                                                  |
+| **View Progress**         | Per profile, read-only: current count, target and completed sets. Works for any profile, not only the active one.                                                                                                                                                              |
+| **Safe reset / delete**   | **Reset Progress** per profile (count and sets to 0) and **Delete Profile**, each with a dialog that names the profile and has **No** pre-selected. Back cancels.                                                                                                              |
 | **Feedback**              | Four independent switches: **Counter** vibration/sound (short tick per count) and **Target** vibration/sound (distinct pattern plus a green LED when a set is complete). Default: quiet counting, vibration + sound at the target. Respects the system settings (see below). |
 | **Persistence**           | Versioned, CRC-protected settings file with crash-safe writes and automatic migration of v1.0 data.                                                                                                                                                                            |
 
@@ -41,14 +42,14 @@ any dhikr should be recited.
 ```
 Flipper Dhikr
   Start Counting
-  Dhikr Profiles        <- select profiles, edit targets, names, delete
+  Dhikr Profiles        <- select a profile; hold OK for its details
   Feedback Settings
-  Reset Counter         <- active profile, asks first (No pre-selected)
   About
 ```
 
-Back on the main menu exits the app. Up to v1.0.2 there was also a `Target Settings` entry;
-targets are now edited per profile (see Dhikr Profiles below).
+Back on the main menu exits the app. Up to v1.0.2 there were also `Target Settings` and
+`Reset Counter`, which always applied to the active profile. Both now live in the details menu
+of each profile, so it is always clear which profile they change.
 
 **Counter screen**
 
@@ -62,20 +63,27 @@ targets are now edited per profile (see Dhikr Profiles below).
 Holding OK does **not** count. Up does nothing. The bottom row reminds you: `▼Undo`, `(+1)`
 and `Muted` when stealth mode is silencing the feedback.
 
-Below the count the progress bar shows the percentage and the completed sets, e.g.
-`90%  Sets: 0`.
+```
+<      SubhanAllah      >
+         29 /33
+[########       87%      ]
+▼Undo      (+1)
+```
 
-**What you see at the target (example: target 33):** `32/33` → OK → **`33/33 Set 1
-complete!`** (about 1 s, signal plays once) → `0/33 Sets: 1` → … → `33/33 Set 2 complete!` →
-`0/33 Sets: 2`. A press during the message already counts as 1 of the next set, so no count
-is lost.
+The screen shows the profile name, the count, the target and a progress bar with the
+percentage (as in v1.0.2). Completed sets are not shown here, to keep it simple; see
+**View Progress**.
+
+**What you see at the target (example: target 33):** `32/33` → OK → **`33/33 Target
+reached!`** (about 1 s, signal plays once) → `0/33`. One completed set is recorded. A press
+during the message already counts as 1 of the next set, so no count is lost.
 
 Sets are counted per profile. They are a simple tally of completed passes: they are not
 converted into a total number of repetitions, so changing the target later does not change
 them.
 
-**Undo directly after a completed set:** `0/33 Sets: 1` → hold Down → `32/33`, "Set
-undone", and `Sets` goes back to 0. After any further count, undo works normally on the
+**Undo directly after a completed set:** `0/33` → hold Down → `32/33`, "Set undone", and
+the recorded set is removed again. After any further count, undo works normally on the
 current count. When the count is 0 and no set can be restored, the app shows "Nothing to
 undo" and the count stays at 0.
 
@@ -95,24 +103,39 @@ Dhikr Profiles
 | Button               | Action                                                         |
 | -------------------- | -------------------------------------------------------------- |
 | OK on a profile      | Make it active. The list stays open and the `*` moves at once. |
-| Hold OK on a profile | Edit menu for **that** profile (it does not become active)     |
+| Hold OK on a profile | Details of **that** profile (it does not become active)        |
 | `+ Add Profile`      | Enter a name, then a target. The new profile becomes active.   |
-| `Edit Profiles...`   | Pick a profile, then the same edit menu (no need to hold OK)   |
+| `Edit Profiles...`   | Pick a profile, then the same details (no need to hold OK)     |
 | Back                 | Main menu                                                      |
 
-**Edit menu** (header = profile name):
+The highlighted profile and the active profile are different things: the `*` shows which
+profile the counter uses; holding OK opens the details of the highlighted one.
+
+**Profile details** (header = profile name):
 
 ```
-Istighfar
-  Edit Target (100)     -> 33 times / 99 times / Custom value...
-  Rename Profile        (custom profiles only)
-  Delete Profile        (custom profiles only, asks first)
+SubhanAllah               Istighfar
+  View Progress             View Progress
+  Edit Target (33)          Edit Target (100)
+  Reset Progress            Rename Profile
+                            Reset Progress
+                            Delete Profile
 ```
 
-Built-in profiles (SubhanAllah, Alhamdulillah, Allahu Akbar) only offer `Edit Target`.
-Choosing a target saves it at once and returns to the edit menu, which shows the new value;
-Back goes to the profile list. The count, the completed sets and the active profile are not
-changed.
+| Entry            | What it does                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------ |
+| `View Progress`  | Read-only page: `Current: 15/100`, `Completed Sets: 4`, `Target: 100`. Back returns.             |
+| `Edit Target`    | 33 times / 99 times / Custom value... Saved at once, back to the details (shows the new value).  |
+| `Rename Profile` | Custom profiles only.                                                                            |
+| `Reset Progress` | `Reset progress?` dialog with the profile name, count and sets; **No** pre-selected.             |
+| `Delete Profile` | Custom profiles only, with a confirmation.                                                       |
+
+**Reset Progress** sets the count **and** the completed sets of that one profile to 0. Its
+target, name, all other profiles and the active profile stay unchanged. Yes saves at once and
+returns to the details of the same profile; No or Back cancel. A reset cannot be undone with
+hold Down.
+
+None of these entries changes which profile is active.
 
 Names: 1–16 printable characters. Names must be unique (ignoring upper/lower case) and must
 not be empty. The Flipper keyboard only offers ASCII characters.
@@ -153,7 +176,7 @@ The four switches are independent. Examples:
 | ------------ | ------------- | ----------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | OFF          | OFF           | ON          | ON           | Silent counting, vibration + melody at 33/33 (**default for new installs**)                                                        |
 | ON           | OFF           | OFF         | ON           | Tick vibration on each count, melody only at the target                                                                            |
-| ON           | ON            | OFF         | OFF          | Feedback on every count, nothing extra at the target (the target press stays silent; the "Set N complete!" message is still shown)  |
+| ON           | ON            | OFF         | OFF          | Feedback on every count, nothing extra at the target (the target press stays silent; the "Target reached!" message is still shown)  |
 | OFF          | OFF           | OFF         | OFF          | No vibration or sound at all                                                                                                       |
 
 A completed target plays **only** the target pattern, never the counter tick in addition.
@@ -192,7 +215,7 @@ dist/v1.0.3/official-1.5.1/flipper_dhikr.fap
 ### Tests
 
 ```bash
-make -C tests     # 62 host unit tests, AddressSanitizer + UBSan
+make -C tests     # 73 host unit tests, AddressSanitizer + UBSan
 ```
 
 ## Install on the Flipper Zero
@@ -216,7 +239,8 @@ CRC-32 checksum.
 | When                                                | What happens                                                                                                                      |
 | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | Completed set, undo                                 | Saved immediately (at most every 3 s; otherwise via autosave)                                                                     |
-| Profile selected / added / renamed / deleted, reset | Saved immediately                                                                                                                 |
+| Profile selected / added / renamed / deleted        | Saved immediately                                                                                                                 |
+| Reset Progress (confirmed)                          | Saved immediately                                                                                                                 |
 | Target changed (Edit Target)                        | Saved immediately                                                                                                                 |
 | Leaving the counter, main menu, exit                | Saved if anything changed                                                                                                         |
 | While counting                                      | Autosave at most every 15 s after the first unsaved change                                                                        |
@@ -234,10 +258,10 @@ CRC-32 checksum.
 | v1.0 features                         | ✅ tested on hardware (Momentum) by the user                                          |
 | v1.0.1 features                       | ✅ the 9 prioritised hardware tests passed (Momentum)                                 |
 | v1.0.2 independent feedback           | ✅ 9/9 prioritised hardware tests passed (Momentum); extended checklist still open    |
-| v1.0.3 menu and UX changes            | ⏳ **not yet tested on hardware** (see docs/HARDWARE_TESTS.md)                        |
+| v1.0.3 menu, profile details, reset   | ⏳ **current build not yet tested on hardware** (see docs/HARDWARE_TESTS.md)          |
 | Build, Momentum `mntm-012` (API 87.1) | ✅ no warnings, APPCHK passed                                                         |
 | Build, official `1.5.1` (API 88.2)    | ✅ no warnings, APPCHK passed                                                         |
-| Host unit tests                       | ✅ 62/62 (ASan + UBSan), including all 16 switch combinations                         |
+| Host unit tests                       | ✅ 73/73 (ASan + UBSan), including all 16 switch combinations                         |
 | Static analysis                       | ✅ clang `--analyze` (logic) and GCC `-fanalyzer` (all firmware sources): no findings |
 | Screenshots                           | none yet; list in docs/SCREENSHOT_CHECKLIST.md (taken on a real device only)          |
 
@@ -245,11 +269,13 @@ CRC-32 checksum.
 
 - While the target pattern plays (~0.6 s), further vibration/sound ticks are skipped. The counts
   themselves are always kept. With very small targets (e.g. 1) and fast pressing, not every
-  completed set gets its own sound/vibration, but each one shows "Set N complete!".
+  completed set gets its own sound/vibration, but each one shows "Target reached!".
 - System Vibro/Volume cannot be read via the public SDK, so only stealth mode is detected.
 - Undo restores a completed set only directly after it, and only within the same app session.
 - In the settings file and the source code, completed sets are still called `rounds`
   (unchanged format v3).
+- Host tests cover the logic, menu contents and texts, not the screens themselves; screen
+  layout and navigation are checked on the device (docs/HARDWARE_TESTS.md).
 - Up to ~15 s of counts can be lost on power loss.
 - English UI and ASCII names only.
 
