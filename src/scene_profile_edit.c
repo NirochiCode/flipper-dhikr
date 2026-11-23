@@ -1,4 +1,4 @@
-/* "Edit Profiles...": choose a profile to rename, retarget or delete. */
+/* "Edit Profiles...": choose a profile, then its edit menu (target, rename, delete). */
 #include "include/dhikr_app.h"
 
 #include <stdio.h>

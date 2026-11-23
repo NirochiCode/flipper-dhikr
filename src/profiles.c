@@ -108,6 +108,13 @@ bool dhikr_state_select(DhikrState* state, uint8_t index) {
     return true;
 }
 
+bool dhikr_state_set_target(DhikrState* state, uint8_t index, uint32_t target) {
+    if(state == NULL || index >= state->profile_count) return false;
+    DhikrCounter* counter = &state->profiles[index].counter;
+    if(counter->target == target) return false;
+    return dhikr_counter_set_target(counter, target);
+}
+
 void dhikr_state_cycle(DhikrState* state, int step) {
     if(state == NULL || state->profile_count == 0 || step == 0) return;
     int count = state->profile_count;

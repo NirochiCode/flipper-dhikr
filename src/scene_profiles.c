@@ -2,9 +2,9 @@
  * Profile list.
  *   OK (short) on a profile  -> make it active; the list stays open and the
  *                               "*" marker moves immediately (saved at once)
- *   OK (hold) on a profile   -> edit menu for that profile
+ *   OK (hold) on a profile   -> edit menu for that profile (Edit Target, Rename, Delete)
  *   "+ Add Profile"          -> name, then target, then back here
- *   "Edit Profiles..."       -> list for rename / target / delete
+ *   "Edit Profiles..."       -> pick a profile, then the same edit menu
  *   Back                     -> main menu
  */
 #include "include/dhikr_app.h"

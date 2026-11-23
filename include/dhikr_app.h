@@ -60,9 +60,7 @@ typedef enum {
 
 /** What the shared number input is used for. */
 typedef enum {
-    /** Custom target of the active profile (Target Settings). */
-    DhikrTargetModeActive,
-    /** Custom target of `edit_profile` (profile edit menu). */
+    /** Custom target of `edit_profile` (profile edit menu -> Edit Target). */
     DhikrTargetModeEditProfile,
     /** Target of a profile that is being created (name in `pending_name`). */
     DhikrTargetModeNewProfile,

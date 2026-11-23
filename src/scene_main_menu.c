@@ -1,13 +1,9 @@
+/*
+ * Main menu. Targets are edited per profile (Dhikr Profiles -> hold OK or
+ * Edit Profiles... -> Edit Target), so there is no separate target entry.
+ */
 #include "include/dhikr_app.h"
-
-typedef enum {
-    MainMenuStartCounting,
-    MainMenuProfiles,
-    MainMenuTarget,
-    MainMenuFeedback,
-    MainMenuReset,
-    MainMenuAbout,
-} MainMenuItem;
+#include "include/menu.h"
 
 static void main_menu_callback(void* context, uint32_t index) {
     DhikrApp* app = context;
@@ -23,14 +19,17 @@ void dhikr_scene_main_menu_on_enter(void* context) {
 
     submenu_reset(submenu);
     submenu_set_header(submenu, DHIKR_APP_NAME);
-    submenu_add_item(submenu, "Start Counting", MainMenuStartCounting, main_menu_callback, app);
-    submenu_add_item(submenu, "Dhikr Profiles", MainMenuProfiles, main_menu_callback, app);
-    submenu_add_item(submenu, "Target Settings", MainMenuTarget, main_menu_callback, app);
-    submenu_add_item(submenu, "Feedback Settings", MainMenuFeedback, main_menu_callback, app);
-    submenu_add_item(submenu, "Reset Counter", MainMenuReset, main_menu_callback, app);
-    submenu_add_item(submenu, "About", MainMenuAbout, main_menu_callback, app);
-    submenu_set_selected_item(
-        submenu, scene_manager_get_scene_state(app->scene_manager, DhikrSceneMainMenu));
+    for(uint32_t item = 0; item < DhikrMainMenuCount; item++) {
+        submenu_add_item(
+            submenu,
+            dhikr_main_menu_label((DhikrMainMenuItem)item),
+            item,
+            main_menu_callback,
+            app);
+    }
+    uint32_t selected = scene_manager_get_scene_state(app->scene_manager, DhikrSceneMainMenu);
+    if(selected >= DhikrMainMenuCount) selected = 0;
+    submenu_set_selected_item(submenu, selected);
 
     view_dispatcher_switch_to_view(app->view_dispatcher, DhikrViewSubmenu);
 }
@@ -39,17 +38,20 @@ bool dhikr_scene_main_menu_on_event(void* context, SceneManagerEvent event) {
     DhikrApp* app = context;
     if(event.type != SceneManagerEventTypeCustom) return false;
 
-    static const DhikrScene targets[] = {
-        [MainMenuStartCounting] = DhikrSceneCounter,
-        [MainMenuProfiles] = DhikrSceneProfiles,
-        [MainMenuTarget] = DhikrSceneTarget,
-        [MainMenuFeedback] = DhikrSceneFeedback,
-        [MainMenuReset] = DhikrSceneReset,
-        [MainMenuAbout] = DhikrSceneAbout,
+    static const DhikrScene targets[DhikrMainMenuCount] = {
+        [DhikrMainMenuStartCounting] = DhikrSceneCounter,
+        [DhikrMainMenuProfiles] = DhikrSceneProfiles,
+        [DhikrMainMenuFeedback] = DhikrSceneFeedback,
+        [DhikrMainMenuReset] = DhikrSceneReset,
+        [DhikrMainMenuAbout] = DhikrSceneAbout,
     };
     if(event.event >= COUNT_OF(targets)) return false;
 
     scene_manager_set_scene_state(app->scene_manager, DhikrSceneMainMenu, event.event);
+    if(event.event == DhikrMainMenuProfiles) {
+        // Open the profile list on the active profile.
+        scene_manager_set_scene_state(app->scene_manager, DhikrSceneProfiles, 0);
+    }
     scene_manager_next_scene(app->scene_manager, targets[event.event]);
     return true;
 }

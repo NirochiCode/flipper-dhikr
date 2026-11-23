@@ -90,6 +90,13 @@ void dhikr_state_cycle(DhikrState* state, int step);
 /** @return index of the profile with the given id, or -1. */
 int dhikr_state_find(const DhikrState* state, const char* id);
 
+/**
+ * Change the target of profile `index` (not necessarily the active one).
+ * The active profile, the count and the completed rounds (sets) stay unchanged.
+ * @return true if the target was changed (false if invalid or already equal)
+ */
+bool dhikr_state_set_target(DhikrState* state, uint8_t index, uint32_t target);
+
 /** Reset count and rounds of the active profile only. */
 void dhikr_state_reset_active(DhikrState* state);
 

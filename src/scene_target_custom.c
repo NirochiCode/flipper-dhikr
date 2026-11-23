@@ -1,7 +1,6 @@
 /*
  * Number input for a target (1-9999). Used for:
- *  - the active profile (Target Settings -> Custom value)
- *  - any profile from its edit menu
+ *  - any profile from its edit menu (Edit Target -> Custom value...)
  *  - a new profile (second step of "+ Add Profile")
  */
 #include "include/dhikr_app.h"
@@ -12,12 +11,9 @@ static void target_number_callback(void* context, int32_t number) {
     view_dispatcher_send_custom_event(app->view_dispatcher, DhikrEventNumberEntered);
 }
 
-static DhikrCounter* target_counter(DhikrApp* app) {
-    if(app->target_mode == DhikrTargetModeEditProfile &&
-       app->edit_profile < app->state.profile_count) {
-        return &app->state.profiles[app->edit_profile].counter;
-    }
-    return &dhikr_state_active(&app->state)->counter;
+static const DhikrCounter* target_counter(DhikrApp* app) {
+    if(app->edit_profile >= app->state.profile_count) app->edit_profile = 0;
+    return &app->state.profiles[app->edit_profile].counter;
 }
 
 void dhikr_scene_target_custom_on_enter(void* context) {
@@ -73,31 +69,19 @@ bool dhikr_scene_target_custom_on_event(void* context, SceneManagerEvent event) 
     }
     const uint32_t target = (uint32_t)app->number_value;
 
-    switch(app->target_mode) {
-    case DhikrTargetModeNewProfile:
+    if(app->target_mode == DhikrTargetModeNewProfile) {
         target_custom_create_profile(app, target);
-        break;
-    case DhikrTargetModeEditProfile: {
-        DhikrCounter* counter = target_counter(app);
-        if(counter->target != target && dhikr_counter_set_target(counter, target)) {
-            dhikr_app_mark_dirty(app);
-            dhikr_app_save_if_dirty(app);
-        }
-        scene_manager_previous_scene(app->scene_manager);
-        break;
+        return true;
     }
-    case DhikrTargetModeActive:
-    default: {
-        // Changing the target never touches the current count.
-        DhikrCounter* counter = target_counter(app);
-        if(counter->target != target && dhikr_counter_set_target(counter, target)) {
-            dhikr_app_mark_dirty(app);
-        }
-        scene_manager_search_and_switch_to_previous_scene(
-            app->scene_manager, DhikrSceneMainMenu);
-        break;
+
+    // Edit Target of `edit_profile`: count, sets and the active profile stay unchanged.
+    if(dhikr_state_set_target(&app->state, app->edit_profile, target)) {
+        dhikr_app_mark_dirty(app);
+        dhikr_app_save_if_dirty(app);
     }
-    }
+    // Back to that profile's edit menu (skipping the preset list).
+    scene_manager_search_and_switch_to_previous_scene(
+        app->scene_manager, DhikrSceneProfileActions);
     return true;
 }
 

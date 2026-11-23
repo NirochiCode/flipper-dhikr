@@ -1,14 +1,15 @@
-/* Edit menu for one profile (app->edit_profile): target, rename, delete. */
+/*
+ * Edit menu for one profile (app->edit_profile), header = profile name:
+ *   Edit Target (33)   -> target presets 33 / 99 / custom for THIS profile
+ *   Rename Profile     (custom profiles only)
+ *   Delete Profile     (custom profiles only)
+ * Editing never changes which profile is active.
+ */
 #include "include/dhikr_app.h"
+#include "include/menu.h"
 
 #include <stdio.h>
 #include <string.h>
-
-typedef enum {
-    ActionTarget,
-    ActionRename,
-    ActionDelete,
-} ProfileAction;
 
 static void profile_actions_callback(void* context, uint32_t index) {
     DhikrApp* app = context;
@@ -29,16 +30,11 @@ void dhikr_scene_profile_actions_on_enter(void* context) {
     snprintf(app->header, sizeof(app->header), "%s", name);
     submenu_set_header(submenu, app->header);
 
-    snprintf(
-        app->labels[0],
-        DHIKR_LABEL_SIZE,
-        "Target: %lu",
-        (unsigned long)profile->counter.target);
-    submenu_add_item(submenu, app->labels[0], ActionTarget, profile_actions_callback, app);
-    if(!profile->builtin) {
-        // Built-in profiles keep their names and cannot be deleted.
-        submenu_add_item(submenu, "Rename", ActionRename, profile_actions_callback, app);
-        submenu_add_item(submenu, "Delete", ActionDelete, profile_actions_callback, app);
+    DhikrProfileAction actions[DhikrProfileActionCount];
+    const uint8_t count = dhikr_profile_actions(profile, actions);
+    for(uint8_t i = 0; i < count; i++) {
+        dhikr_profile_action_label(profile, actions[i], app->labels[i], DHIKR_LABEL_SIZE);
+        submenu_add_item(submenu, app->labels[i], actions[i], profile_actions_callback, app);
     }
 
     submenu_set_selected_item(
@@ -53,25 +49,25 @@ bool dhikr_scene_profile_actions_on_event(void* context, SceneManagerEvent event
         return false;
     }
     if(event.type != SceneManagerEventTypeCustom) return false;
+    if(event.event >= DhikrProfileActionCount) return false;
 
-    const bool builtin = app->state.profiles[app->edit_profile].builtin;
-    switch(event.event) {
-    case ActionTarget:
-        scene_manager_set_scene_state(app->scene_manager, DhikrSceneProfileActions, ActionTarget);
-        app->target_mode = DhikrTargetModeEditProfile;
-        scene_manager_next_scene(app->scene_manager, DhikrSceneTargetCustom);
+    const DhikrProfileAction action = (DhikrProfileAction)event.event;
+    if(!dhikr_profile_action_allowed(&app->state.profiles[app->edit_profile], action)) {
         return true;
-    case ActionRename:
-        if(builtin) return true;
-        scene_manager_set_scene_state(app->scene_manager, DhikrSceneProfileActions, ActionRename);
+    }
+    scene_manager_set_scene_state(app->scene_manager, DhikrSceneProfileActions, action);
+    switch(action) {
+    case DhikrProfileActionTarget:
+        scene_manager_next_scene(app->scene_manager, DhikrSceneTarget);
+        return true;
+    case DhikrProfileActionRename:
         app->name_mode = DhikrNameModeRename;
         scene_manager_next_scene(app->scene_manager, DhikrSceneProfileName);
         return true;
-    case ActionDelete:
-        if(builtin) return true;
-        scene_manager_set_scene_state(app->scene_manager, DhikrSceneProfileActions, ActionDelete);
+    case DhikrProfileActionDelete:
         scene_manager_next_scene(app->scene_manager, DhikrSceneProfileDelete);
         return true;
+    case DhikrProfileActionCount:
     default:
         return false;
     }
