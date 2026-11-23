@@ -231,7 +231,7 @@ crc32=1A2B3C4D
 
 ## Testing and checks
 
-- `tests/test_main.c`: 73 tests (including all 16 feedback switch combinations, each with a
+- `tests/test_main.c`: 74 tests (including all 16 feedback switch combinations, each with a
   simulated round and a save/reload, and the v1.0.3 tests U1–U12 and P1–P11) against the
   pure modules with an in-memory fake
   `DhikrFileIo`, built with `-Wall -Wextra -Werror -Wconversion` and ASan/UBSan.

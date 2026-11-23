@@ -1,8 +1,6 @@
 /* "Edit Profiles...": choose a profile, then its details menu (same as hold OK). */
 #include "include/dhikr_app.h"
-
-#include <stdio.h>
-#include <string.h>
+#include "include/menu.h"
 
 static void profile_edit_callback(void* context, uint32_t index) {
     DhikrApp* app = context;
@@ -17,12 +15,8 @@ void dhikr_scene_profile_edit_on_enter(void* context) {
     submenu_reset(submenu);
     submenu_set_header(submenu, "Edit Profiles");
     for(uint8_t i = 0; i < state->profile_count; i++) {
-        const DhikrProfile* profile = &state->profiles[i];
-        // Local copy: source and destination both live inside `app`.
-        char name[DHIKR_PROFILE_NAME_SIZE];
-        memcpy(name, profile->name, sizeof(name));
-        snprintf(
-            app->labels[i], DHIKR_LABEL_SIZE, "%s%s", name, profile->builtin ? " (fixed)" : "");
+        // Name only; built-in profiles are not marked (permissions are unchanged).
+        dhikr_profile_list_label(&state->profiles[i], app->labels[i], DHIKR_LABEL_SIZE);
         submenu_add_item(submenu, app->labels[i], i, profile_edit_callback, app);
     }
 

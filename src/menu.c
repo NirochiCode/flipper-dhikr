@@ -79,6 +79,15 @@ void dhikr_profile_action_label(
     }
 }
 
+void dhikr_profile_list_label(const DhikrProfile* profile, char* out, size_t out_size) {
+    if(out == NULL || out_size == 0) return;
+    if(profile == NULL) {
+        out[0] = '\0';
+        return;
+    }
+    snprintf(out, out_size, "%s", profile->name);
+}
+
 void dhikr_progress_text(const DhikrProfile* profile, DhikrProgressText* out) {
     if(out == NULL) return;
     if(profile == NULL) {

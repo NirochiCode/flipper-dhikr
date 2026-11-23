@@ -11,7 +11,7 @@ sections are kept as they were tested.
 ## v1.0.3 – menu, profile details and reset (NOT yet validated on hardware)
 
 **Status: the current v1.0.3 build has not been tested on a Flipper Zero.** Host unit tests:
-73/73. Builds: Momentum `mntm-012` and official `1.5.1`, no warnings.
+74/74. Builds: Momentum `mntm-012` and official `1.5.1`, no warnings.
 
 An earlier v1.0.3 build (with `Reset Counter` in the main menu and `Sets: N` on the counter
 screen) was tried on Momentum. The user observed that a reset only changed the active profile.
@@ -74,6 +74,7 @@ a custom profile "Istighfar" (target 100) with about 15/100 and some sets.
 | V23 | | Counter ON / Target OFF | Tick on counts 1–32, silent at 33, `Target reached!` shown | ☐ |
 | V24 | | Stealth mode on | `Muted` on the counter screen | ☐ |
 | V25 | | 10+ profiles | Profile list scrolls; `+ Add Profile` and `Edit Profiles...` reachable | ☐ |
+| V26 | | Dhikr Profiles → `Edit Profiles...` | Only names (`SubhanAllah`, `Alhamdulillah`, `Allahu Akbar`, custom names); no `(fixed)`; built-ins still offer no Rename/Delete | ☐ |
 
 Firmware tested: _______  Date: _______
 

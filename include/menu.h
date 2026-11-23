@@ -66,6 +66,14 @@ void dhikr_profile_action_label(
     char* out,
     size_t out_size);
 
+/* --- Edit Profiles list ----------------------------------------------------- */
+
+/**
+ * Label of a profile in the "Edit Profiles" list: only the profile name, for
+ * built-in and custom profiles alike (no suffix). Truncated to `out_size`.
+ */
+void dhikr_profile_list_label(const DhikrProfile* profile, char* out, size_t out_size);
+
 /* --- View Progress ----------------------------------------------------------- */
 
 #define DHIKR_PROGRESS_LINE_SIZE 32

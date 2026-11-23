@@ -215,7 +215,7 @@ dist/v1.0.3/official-1.5.1/flipper_dhikr.fap
 ### Tests
 
 ```bash
-make -C tests     # 73 host unit tests, AddressSanitizer + UBSan
+make -C tests     # 74 host unit tests, AddressSanitizer + UBSan
 ```
 
 ## Install on the Flipper Zero
@@ -261,7 +261,7 @@ CRC-32 checksum.
 | v1.0.3 menu, profile details, reset   | ⏳ **current build not yet tested on hardware** (see docs/HARDWARE_TESTS.md)          |
 | Build, Momentum `mntm-012` (API 87.1) | ✅ no warnings, APPCHK passed                                                         |
 | Build, official `1.5.1` (API 88.2)    | ✅ no warnings, APPCHK passed                                                         |
-| Host unit tests                       | ✅ 73/73 (ASan + UBSan), including all 16 switch combinations                         |
+| Host unit tests                       | ✅ 74/74 (ASan + UBSan), including all 16 switch combinations                         |
 | Static analysis                       | ✅ clang `--analyze` (logic) and GCC `-fanalyzer` (all firmware sources): no findings |
 | Screenshots                           | none yet; list in docs/SCREENSHOT_CHECKLIST.md (taken on a real device only)          |
 

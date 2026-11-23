@@ -16,6 +16,8 @@ Menus and navigation only. No new statistics, same settings format.
   `View Progress`, `Edit Target (N)`, `Rename Profile`, `Reset Progress`, `Delete Profile`.
   Built-in profiles offer View Progress, Edit Target and Reset Progress. Opening or using the
   details never changes the active profile.
+- **Edit Profiles list:** shows only the profile names. Built-in profiles no longer carry
+  the `(fixed)` suffix; they still cannot be renamed or deleted.
 - **Edit Target** opens the familiar 33 / 99 / custom choice for exactly that profile, saves
   at once and returns to its details.
 - **Counter screen:** the progress bar shows the percentage again (as in v1.0.2, without the
@@ -48,10 +50,10 @@ Menus and navigation only. No new statistics, same settings format.
   limits and all confirmations.
 
 ### Tests and build
-- 73 host unit tests (50 in v1.0.2). New: U1–U12 (menus, Edit Target, v1.0.2 file
+- 74 host unit tests (50 in v1.0.2). New: U1–U12 (menus, Edit Target, v1.0.2 file
   compatibility) and P1–P11 (profile details, View Progress, per-profile reset including
   inactive profiles, undo after reset, cancel, persistence, save failure, percentage text,
-  `Target reached!`). Checked with intentionally broken code (5 variants, all detected).
+  `Target reached!`) and P12 (Edit Profiles labels without `(fixed)`). Checked with intentionally broken code (5 variants, all detected).
 - GCC `-fanalyzer` (29 firmware sources) and clang `--analyze` (logic): no findings.
 - Momentum `mntm-012` (API 87.1) and official `1.5.1` (API 88.2): build without warnings,
   APPCHK passed. Output in `dist/v1.0.3/`.

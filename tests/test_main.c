@@ -2061,6 +2061,43 @@ static void test_crc32_known_vector(void) {
     EXPECT_EQ_U(dhikr_crc32("123456789", 9), 0xCBF43926UL);
 }
 
+static void test_edit_profiles_labels_names_only(void) { // [P12]
+    DhikrState s;
+    setup_reset_example(&s);
+    DhikrState before = s;
+    char label[40];
+    for(uint8_t i = 0; i < s.profile_count; i++) {
+        const DhikrProfile* p = &s.profiles[i];
+        dhikr_profile_list_label(p, label, sizeof(label));
+        // Exactly the name, no "(fixed)" marker, for built-in and custom profiles.
+        EXPECT(strcmp(label, p->name) == 0);
+        EXPECT(strstr(label, "fixed") == NULL);
+        EXPECT(strchr(label, '(') == NULL);
+        // Permissions are unchanged.
+        EXPECT_EQ_U(dhikr_profile_action_allowed(p, DhikrProfileActionRename), !p->builtin);
+        EXPECT_EQ_U(dhikr_profile_action_allowed(p, DhikrProfileActionDelete), !p->builtin);
+        EXPECT(dhikr_profile_action_allowed(p, DhikrProfileActionProgress));
+        EXPECT(dhikr_profile_action_allowed(p, DhikrProfileActionTarget));
+        EXPECT(dhikr_profile_action_allowed(p, DhikrProfileActionReset));
+    }
+    dhikr_profile_list_label(&s.profiles[0], label, sizeof(label));
+    EXPECT(strcmp(label, "SubhanAllah") == 0);
+    EXPECT(s.profiles[0].builtin);
+
+    // Longest possible name fits completely; a small buffer truncates safely.
+    DhikrProfile longp = s.profiles[s.profile_count - 1];
+    memset(longp.name, 'W', DHIKR_PROFILE_NAME_SIZE - 1);
+    longp.name[DHIKR_PROFILE_NAME_SIZE - 1] = '\0';
+    dhikr_profile_list_label(&longp, label, sizeof(label));
+    EXPECT_EQ_U(strlen(label), DHIKR_PROFILE_NAME_SIZE - 1);
+    char small[5];
+    dhikr_profile_list_label(&longp, small, sizeof(small));
+    EXPECT(strcmp(small, "WWWW") == 0);
+
+    // Building labels changes no profile data.
+    EXPECT(memcmp(&s, &before, sizeof(s)) == 0);
+}
+
 int main(void) {
     printf("Flipper Dhikr host unit tests\n");
 
@@ -2152,6 +2189,7 @@ int main(void) {
     RUN_TEST(test_undo_cannot_restore_reset);
     RUN_TEST(test_reset_persisted_and_usable);
     RUN_TEST(test_reset_save_failure_consistent);
+    RUN_TEST(test_edit_profiles_labels_names_only);
 
     printf("\n%d tests, %d failed\n", g_tests_run, g_tests_failed);
     return g_tests_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
