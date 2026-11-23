@@ -9,20 +9,21 @@
 
 #include <gui/scene_manager.h>
 
-#define DHIKR_SCENE_LIST(X)            \
-    X(MainMenu, main_menu)             \
-    X(Counter, counter)                \
-    X(Profiles, profiles)              \
-    X(ProfileEdit, profile_edit)       \
-    X(ProfileActions, profile_actions) \
-    X(ProfileName, profile_name)       \
-    X(ProfileDelete, profile_delete)   \
-    X(Target, target)                  \
-    X(TargetCustom, target_custom)     \
-    X(Feedback, feedback)              \
-    X(FeedbackEvent, feedback_event)   \
-    X(Reset, reset)                    \
-    X(About, about)                    \
+#define DHIKR_SCENE_LIST(X)              \
+    X(MainMenu, main_menu)               \
+    X(Counter, counter)                  \
+    X(Profiles, profiles)                \
+    X(ProfileEdit, profile_edit)         \
+    X(ProfileActions, profile_actions)   \
+    X(ProfileProgress, profile_progress) \
+    X(ProfileName, profile_name)         \
+    X(ProfileDelete, profile_delete)     \
+    X(Target, target)                    \
+    X(TargetCustom, target_custom)       \
+    X(Feedback, feedback)                \
+    X(FeedbackEvent, feedback_event)     \
+    X(ProfileReset, profile_reset)       \
+    X(About, about)                      \
     X(Notice, notice)
 
 #define DHIKR_SCENE_ENUM(id, name) DhikrScene##id,

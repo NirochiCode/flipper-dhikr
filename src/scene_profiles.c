@@ -2,9 +2,10 @@
  * Profile list.
  *   OK (short) on a profile  -> make it active; the list stays open and the
  *                               "*" marker moves immediately (saved at once)
- *   OK (hold) on a profile   -> edit menu for that profile (Edit Target, Rename, Delete)
+ *   OK (hold) on a profile   -> details of that profile (progress, target, rename,
+ *                               reset, delete); it does not become active
  *   "+ Add Profile"          -> name, then target, then back here
- *   "Edit Profiles..."       -> pick a profile, then the same edit menu
+ *   "Edit Profiles..."       -> pick a profile, then the same details menu
  *   Back                     -> main menu
  */
 #include "include/dhikr_app.h"
@@ -82,7 +83,7 @@ bool dhikr_scene_profiles_on_event(void* context, SceneManagerEvent event) {
     if(event.event >= EVENT_LONG_OFFSET && event.event < EVENT_LONG_OFFSET + count) {
         uint8_t index = (uint8_t)(event.event - EVENT_LONG_OFFSET);
         scene_manager_set_scene_state(app->scene_manager, DhikrSceneProfiles, index);
-        app->edit_profile = index;
+        dhikr_app_set_edit_profile(app, index); // the highlighted one, not the active one
         scene_manager_next_scene(app->scene_manager, DhikrSceneProfileActions);
         return true;
     }

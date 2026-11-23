@@ -3,6 +3,8 @@
  * @brief Flipper Dhikr entry point: allocation, main loop, save policy, cleanup.
  */
 #include "include/dhikr_app.h"
+
+#include <string.h>
 #include "include/storage_flipper.h"
 
 #define TAG "FlipperDhikr"
@@ -39,6 +41,22 @@ void dhikr_app_show_notice(DhikrApp* app, const char* title, const char* text) {
     app->notice_title = title;
     app->notice_text = text;
     scene_manager_next_scene(app->scene_manager, DhikrSceneNotice);
+}
+
+void dhikr_app_set_edit_profile(DhikrApp* app, uint8_t index) {
+    if(index >= app->state.profile_count) index = 0;
+    app->edit_profile = index;
+    // Local copy: source and destination both live inside `app`.
+    char id[DHIKR_PROFILE_ID_SIZE];
+    memcpy(id, app->state.profiles[index].id, sizeof(id));
+    memcpy(app->edit_profile_id, id, sizeof(id));
+}
+
+bool dhikr_app_resolve_edit_profile(DhikrApp* app) {
+    int index = dhikr_state_find(&app->state, app->edit_profile_id);
+    if(index < 0) return false;
+    app->edit_profile = (uint8_t)index;
+    return true;
 }
 
 void dhikr_app_save_if_dirty(DhikrApp* app) {

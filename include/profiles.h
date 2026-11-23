@@ -97,7 +97,15 @@ int dhikr_state_find(const DhikrState* state, const char* id);
  */
 bool dhikr_state_set_target(DhikrState* state, uint8_t index, uint32_t target);
 
-/** Reset count and rounds of the active profile only. */
+/**
+ * Reset the progress of the profile with the given id: count and completed
+ * rounds (sets) become 0 and its undo information is cleared. Target, name, id,
+ * the active profile and all other profiles stay unchanged.
+ * @return false if no profile has this id (nothing changed)
+ */
+bool dhikr_state_reset_profile(DhikrState* state, const char* id);
+
+/** Reset count and rounds of the active profile only (same as reset_profile on its id). */
 void dhikr_state_reset_active(DhikrState* state);
 
 /** @return true if another profile can be added. */

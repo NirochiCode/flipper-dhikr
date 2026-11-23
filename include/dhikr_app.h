@@ -105,7 +105,10 @@ typedef struct {
     uint32_t target_feedback_until_ms;
 
     /* Scratch data for the input and edit scenes. */
+    /** Profile chosen in the list for the details menu (index, re-resolved from the id). */
     uint8_t edit_profile;
+    /** Stable id of that profile; destructive actions are applied by id. */
+    char edit_profile_id[DHIKR_PROFILE_ID_SIZE];
     DhikrTargetMode target_mode;
     DhikrNameMode name_mode;
     int32_t number_value;
@@ -136,6 +139,15 @@ void dhikr_app_show_notice(DhikrApp* app, const char* title, const char* text);
  * in that case the change is left to the autosave (rate limit for tiny targets).
  */
 void dhikr_app_save_soon(DhikrApp* app);
+
+/** Remember profile `index` as the one being edited (index and id). */
+void dhikr_app_set_edit_profile(DhikrApp* app, uint8_t index);
+
+/**
+ * Re-resolve `edit_profile` from `edit_profile_id`.
+ * @return false if that profile no longer exists
+ */
+bool dhikr_app_resolve_edit_profile(DhikrApp* app);
 
 /** Save if changes have been pending for DHIKR_AUTOSAVE_INTERVAL_MS. */
 void dhikr_app_autosave_tick(DhikrApp* app);

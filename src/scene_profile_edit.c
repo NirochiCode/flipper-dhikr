@@ -1,4 +1,4 @@
-/* "Edit Profiles...": choose a profile, then its edit menu (target, rename, delete). */
+/* "Edit Profiles...": choose a profile, then its details menu (same as hold OK). */
 #include "include/dhikr_app.h"
 
 #include <stdio.h>
@@ -38,7 +38,7 @@ bool dhikr_scene_profile_edit_on_event(void* context, SceneManagerEvent event) {
     if(event.event >= app->state.profile_count) return false;
 
     scene_manager_set_scene_state(app->scene_manager, DhikrSceneProfileEdit, event.event);
-    app->edit_profile = (uint8_t)event.event;
+    dhikr_app_set_edit_profile(app, (uint8_t)event.event);
     scene_manager_next_scene(app->scene_manager, DhikrSceneProfileActions);
     return true;
 }

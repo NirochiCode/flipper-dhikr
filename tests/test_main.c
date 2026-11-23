@@ -1462,13 +1462,13 @@ static void test_feedback_corrupt_files(void) { // [F13]
 /* ========================================================================= */
 
 static void test_main_menu_without_target_settings(void) { // [U1]
-    const char* expected[] = {
-        "Start Counting", "Dhikr Profiles", "Feedback Settings", "Reset Counter", "About"};
-    EXPECT_EQ_U(DhikrMainMenuCount, 5);
+    const char* expected[] = {"Start Counting", "Dhikr Profiles", "Feedback Settings", "About"};
+    EXPECT_EQ_U(DhikrMainMenuCount, 4);
     for(int i = 0; i < DhikrMainMenuCount; i++) {
         const char* label = dhikr_main_menu_label((DhikrMainMenuItem)i);
         EXPECT(strcmp(label, expected[i]) == 0);
         EXPECT(strstr(label, "Target") == NULL);
+        EXPECT(strstr(label, "Reset") == NULL);
     }
     EXPECT(strcmp(dhikr_main_menu_label(DhikrMainMenuCount), "") == 0);
 }
@@ -1481,8 +1481,9 @@ static void test_edit_target_reachable_for_every_profile(void) { // [U2]
     for(uint8_t i = 0; i < s.profile_count; i++) {
         DhikrProfileAction actions[DhikrProfileActionCount];
         uint8_t n = dhikr_profile_actions(&s.profiles[i], actions);
-        EXPECT(n >= 1);
-        EXPECT_EQ_U(actions[0], DhikrProfileActionTarget); // always first
+        EXPECT(n >= 3);
+        EXPECT_EQ_U(actions[0], DhikrProfileActionProgress); // always first
+        EXPECT_EQ_U(actions[1], DhikrProfileActionTarget);
         EXPECT(dhikr_profile_action_allowed(&s.profiles[i], DhikrProfileActionTarget));
     }
     char label[40];
@@ -1559,8 +1560,10 @@ static void test_builtin_actions_restricted(void) { // [U6]
     for(uint8_t i = 0; i < s.profile_count; i++) {
         if(!s.profiles[i].builtin) continue;
         DhikrProfileAction actions[DhikrProfileActionCount];
-        EXPECT_EQ_U(dhikr_profile_actions(&s.profiles[i], actions), 1);
-        EXPECT_EQ_U(actions[0], DhikrProfileActionTarget);
+        EXPECT_EQ_U(dhikr_profile_actions(&s.profiles[i], actions), 3);
+        EXPECT_EQ_U(actions[0], DhikrProfileActionProgress);
+        EXPECT_EQ_U(actions[1], DhikrProfileActionTarget);
+        EXPECT_EQ_U(actions[2], DhikrProfileActionReset);
         EXPECT(!dhikr_profile_action_allowed(&s.profiles[i], DhikrProfileActionRename));
         EXPECT(!dhikr_profile_action_allowed(&s.profiles[i], DhikrProfileActionDelete));
         // The model refuses as well, independent of the menu.
@@ -1580,10 +1583,12 @@ static void test_custom_profile_actions(void) { // [U7]
     uint8_t a;
     EXPECT_EQ_U(dhikr_state_add_custom(&s, "Salawat", 33, &a), DhikrProfileOk);
     DhikrProfileAction actions[DhikrProfileActionCount];
-    EXPECT_EQ_U(dhikr_profile_actions(&s.profiles[a], actions), 3);
-    EXPECT_EQ_U(actions[0], DhikrProfileActionTarget);
-    EXPECT_EQ_U(actions[1], DhikrProfileActionRename);
-    EXPECT_EQ_U(actions[2], DhikrProfileActionDelete);
+    EXPECT_EQ_U(dhikr_profile_actions(&s.profiles[a], actions), 5);
+    EXPECT_EQ_U(actions[0], DhikrProfileActionProgress);
+    EXPECT_EQ_U(actions[1], DhikrProfileActionTarget);
+    EXPECT_EQ_U(actions[2], DhikrProfileActionRename);
+    EXPECT_EQ_U(actions[3], DhikrProfileActionReset);
+    EXPECT_EQ_U(actions[4], DhikrProfileActionDelete);
     char label[40];
     dhikr_profile_action_label(&s.profiles[a], DhikrProfileActionRename, label, sizeof(label));
     EXPECT(strcmp(label, "Rename Profile") == 0);

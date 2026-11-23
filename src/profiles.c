@@ -130,9 +130,18 @@ int dhikr_state_find(const DhikrState* state, const char* id) {
     return -1;
 }
 
+bool dhikr_state_reset_profile(DhikrState* state, const char* id) {
+    if(state == NULL || id == NULL) return false;
+    int index = dhikr_state_find(state, id);
+    if(index < 0) return false;
+    // Clears count, rounds and the undo information of this profile only.
+    dhikr_counter_reset(&state->profiles[index].counter);
+    return true;
+}
+
 void dhikr_state_reset_active(DhikrState* state) {
     DhikrProfile* profile = dhikr_state_active(state);
-    if(profile != NULL) dhikr_counter_reset(&profile->counter);
+    if(profile != NULL) dhikr_state_reset_profile(state, profile->id);
 }
 
 bool dhikr_state_can_add(const DhikrState* state) {

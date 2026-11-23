@@ -1,6 +1,6 @@
 /*
- * Main menu. Targets are edited per profile (Dhikr Profiles -> hold OK or
- * Edit Profiles... -> Edit Target), so there is no separate target entry.
+ * Main menu. Target and reset are per profile (Dhikr Profiles -> hold OK or
+ * Edit Profiles... -> profile details), so they have no entry here.
  */
 #include "include/dhikr_app.h"
 #include "include/menu.h"
@@ -42,7 +42,6 @@ bool dhikr_scene_main_menu_on_event(void* context, SceneManagerEvent event) {
         [DhikrMainMenuStartCounting] = DhikrSceneCounter,
         [DhikrMainMenuProfiles] = DhikrSceneProfiles,
         [DhikrMainMenuFeedback] = DhikrSceneFeedback,
-        [DhikrMainMenuReset] = DhikrSceneReset,
         [DhikrMainMenuAbout] = DhikrSceneAbout,
     };
     if(event.event >= COUNT_OF(targets)) return false;

@@ -10,8 +10,6 @@ const char* dhikr_main_menu_label(DhikrMainMenuItem item) {
         return "Dhikr Profiles";
     case DhikrMainMenuFeedback:
         return "Feedback Settings";
-    case DhikrMainMenuReset:
-        return "Reset Counter";
     case DhikrMainMenuAbout:
         return "About";
     case DhikrMainMenuCount:
@@ -23,7 +21,9 @@ const char* dhikr_main_menu_label(DhikrMainMenuItem item) {
 bool dhikr_profile_action_allowed(const DhikrProfile* profile, DhikrProfileAction action) {
     if(profile == NULL) return false;
     switch(action) {
+    case DhikrProfileActionProgress:
     case DhikrProfileActionTarget:
+    case DhikrProfileActionReset:
         return true;
     case DhikrProfileActionRename:
     case DhikrProfileActionDelete:
@@ -53,6 +53,9 @@ void dhikr_profile_action_label(
     size_t out_size) {
     if(out == NULL || out_size == 0) return;
     switch(action) {
+    case DhikrProfileActionProgress:
+        snprintf(out, out_size, "View Progress");
+        break;
     case DhikrProfileActionTarget:
         if(profile != NULL) {
             snprintf(out, out_size, "Edit Target (%lu)", (unsigned long)profile->counter.target);
@@ -63,6 +66,9 @@ void dhikr_profile_action_label(
     case DhikrProfileActionRename:
         snprintf(out, out_size, "Rename Profile");
         break;
+    case DhikrProfileActionReset:
+        snprintf(out, out_size, "Reset Progress");
+        break;
     case DhikrProfileActionDelete:
         snprintf(out, out_size, "Delete Profile");
         break;
@@ -71,4 +77,21 @@ void dhikr_profile_action_label(
         out[0] = '\0';
         break;
     }
+}
+
+void dhikr_progress_text(const DhikrProfile* profile, DhikrProgressText* out) {
+    if(out == NULL) return;
+    if(profile == NULL) {
+        out->current[0] = out->sets[0] = out->target[0] = '\0';
+        return;
+    }
+    const DhikrCounter* counter = &profile->counter;
+    snprintf(
+        out->current,
+        sizeof(out->current),
+        "Current: %lu/%lu",
+        (unsigned long)counter->count,
+        (unsigned long)counter->target);
+    snprintf(out->sets, sizeof(out->sets), "Completed Sets: %lu", (unsigned long)counter->rounds);
+    snprintf(out->target, sizeof(out->target), "Target: %lu", (unsigned long)counter->target);
 }

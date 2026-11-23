@@ -1,9 +1,12 @@
 /*
- * Edit menu for one profile (app->edit_profile), header = profile name:
+ * Profile details for the profile chosen in the list (app->edit_profile_id),
+ * header = profile name:
+ *   View Progress      -> read-only: current count, completed sets, target
  *   Edit Target (33)   -> target presets 33 / 99 / custom for THIS profile
  *   Rename Profile     (custom profiles only)
+ *   Reset Progress     -> "Reset progress?" (No pre-selected)
  *   Delete Profile     (custom profiles only)
- * Editing never changes which profile is active.
+ * Nothing here changes which profile is active.
  */
 #include "include/dhikr_app.h"
 #include "include/menu.h"
@@ -19,7 +22,11 @@ static void profile_actions_callback(void* context, uint32_t index) {
 void dhikr_scene_profile_actions_on_enter(void* context) {
     DhikrApp* app = context;
     Submenu* submenu = app->submenu;
-    if(app->edit_profile >= app->state.profile_count) app->edit_profile = 0;
+    if(!dhikr_app_resolve_edit_profile(app)) {
+        // The profile no longer exists (should not happen): back to the list.
+        scene_manager_search_and_switch_to_previous_scene(app->scene_manager, DhikrSceneProfiles);
+        return;
+    }
     const DhikrProfile* profile = &app->state.profiles[app->edit_profile];
 
     // Local copy: source and destination both live inside `app`.
@@ -57,12 +64,18 @@ bool dhikr_scene_profile_actions_on_event(void* context, SceneManagerEvent event
     }
     scene_manager_set_scene_state(app->scene_manager, DhikrSceneProfileActions, action);
     switch(action) {
+    case DhikrProfileActionProgress:
+        scene_manager_next_scene(app->scene_manager, DhikrSceneProfileProgress);
+        return true;
     case DhikrProfileActionTarget:
         scene_manager_next_scene(app->scene_manager, DhikrSceneTarget);
         return true;
     case DhikrProfileActionRename:
         app->name_mode = DhikrNameModeRename;
         scene_manager_next_scene(app->scene_manager, DhikrSceneProfileName);
+        return true;
+    case DhikrProfileActionReset:
+        scene_manager_next_scene(app->scene_manager, DhikrSceneProfileReset);
         return true;
     case DhikrProfileActionDelete:
         scene_manager_next_scene(app->scene_manager, DhikrSceneProfileDelete);
