@@ -2,7 +2,8 @@
  * Host unit tests for the hardware-independent Flipper Dhikr logic.
  * Build and run with `make -C tests` (see tests/Makefile).
  *
- * Tests marked [R<n>] cover requirement n of the v1.0.1 test list.
+ * Tests marked [R<n>] cover requirement n of the v1.0.1 test list, [F<n>] the v1.0.2
+ * feedback list and [U<n>] the v1.0.3 menu/UX regression list.
  */
 #include <stdbool.h>
 #include <stdint.h>
@@ -13,6 +14,7 @@
 #include "include/counter.h"
 #include "include/counter_input.h"
 #include "include/feedback.h"
+#include "include/menu.h"
 #include "include/profiles.h"
 #include "include/settings_codec.h"
 #include "include/storage.h"
@@ -1455,6 +1457,320 @@ static void test_feedback_corrupt_files(void) { // [F13]
     EXPECT(feedback_equal(&loaded.feedback, &expected));
 }
 
+/* ========================================================================= */
+/* v1.0.3 menu and UX regression tests [U1-U12]                              */
+/* ========================================================================= */
+
+static void test_main_menu_without_target_settings(void) { // [U1]
+    const char* expected[] = {
+        "Start Counting", "Dhikr Profiles", "Feedback Settings", "Reset Counter", "About"};
+    EXPECT_EQ_U(DhikrMainMenuCount, 5);
+    for(int i = 0; i < DhikrMainMenuCount; i++) {
+        const char* label = dhikr_main_menu_label((DhikrMainMenuItem)i);
+        EXPECT(strcmp(label, expected[i]) == 0);
+        EXPECT(strstr(label, "Target") == NULL);
+    }
+    EXPECT(strcmp(dhikr_main_menu_label(DhikrMainMenuCount), "") == 0);
+}
+
+static void test_edit_target_reachable_for_every_profile(void) { // [U2]
+    DhikrState s;
+    dhikr_state_init_defaults(&s);
+    uint8_t a;
+    EXPECT_EQ_U(dhikr_state_add_custom(&s, "Istighfar", 100, &a), DhikrProfileOk);
+    for(uint8_t i = 0; i < s.profile_count; i++) {
+        DhikrProfileAction actions[DhikrProfileActionCount];
+        uint8_t n = dhikr_profile_actions(&s.profiles[i], actions);
+        EXPECT(n >= 1);
+        EXPECT_EQ_U(actions[0], DhikrProfileActionTarget); // always first
+        EXPECT(dhikr_profile_action_allowed(&s.profiles[i], DhikrProfileActionTarget));
+    }
+    char label[40];
+    dhikr_profile_action_label(&s.profiles[0], DhikrProfileActionTarget, label, sizeof(label));
+    EXPECT(strcmp(label, "Edit Target (33)") == 0);
+    dhikr_profile_action_label(&s.profiles[a], DhikrProfileActionTarget, label, sizeof(label));
+    EXPECT(strcmp(label, "Edit Target (100)") == 0);
+}
+
+static void test_edit_inactive_profile_keeps_active(void) { // [U3]
+    DhikrState s, before;
+    dhikr_state_init_defaults(&s);
+    dhikr_state_select(&s, 1);
+    s.profiles[1].counter.count = 7;
+    s.profiles[1].counter.rounds = 2;
+    s.profiles[2].counter.count = 12;
+    s.profiles[2].counter.rounds = 4;
+    before = s;
+
+    // Edit Target on profile 2 (not active) -> 99.
+    EXPECT(dhikr_state_set_target(&s, 2, 99));
+    EXPECT_EQ_U(s.active, 1);
+    EXPECT_EQ_U(s.profiles[2].counter.target, 99);
+    EXPECT_EQ_U(s.profiles[2].counter.count, 12);
+    EXPECT_EQ_U(s.profiles[2].counter.rounds, 4);
+    // All other profiles are untouched.
+    for(uint8_t i = 0; i < s.profile_count; i++) {
+        if(i == 2) continue;
+        EXPECT(memcmp(&s.profiles[i], &before.profiles[i], sizeof(DhikrProfile)) == 0);
+    }
+    // The active profile's marker is still on profile 1.
+    char label[40];
+    dhikr_state_profile_label(&s, 1, label, sizeof(label));
+    EXPECT(strcmp(label, "* Alhamdulillah") == 0);
+    dhikr_state_profile_label(&s, 2, label, sizeof(label));
+    EXPECT(strcmp(label, "  Allahu Akbar") == 0);
+}
+
+static void test_set_target_rejects_invalid(void) { // [U4]
+    DhikrState s;
+    dhikr_state_init_defaults(&s);
+    EXPECT(!dhikr_state_set_target(&s, 0, 0));
+    EXPECT(!dhikr_state_set_target(&s, 0, DHIKR_TARGET_MAX + 1));
+    EXPECT(!dhikr_state_set_target(&s, 0, 33)); // unchanged value: nothing to save
+    EXPECT(!dhikr_state_set_target(&s, s.profile_count, 99)); // no such profile
+    EXPECT(!dhikr_state_set_target(NULL, 0, 99));
+    EXPECT_EQ_U(s.profiles[0].counter.target, 33);
+    EXPECT(dhikr_state_set_target(&s, 0, DHIKR_TARGET_MAX));
+    EXPECT(dhikr_state_set_target(&s, 0, DHIKR_TARGET_MIN));
+}
+
+static void test_profile_selection_and_marker(void) { // [U5]
+    DhikrState s;
+    dhikr_state_init_defaults(&s);
+    uint8_t a;
+    dhikr_state_add_custom(&s, "Dhikr 1", 33, &a);
+    char label[40];
+    for(uint8_t sel = 0; sel < s.profile_count; sel++) {
+        EXPECT(dhikr_state_select(&s, sel));
+        for(uint8_t i = 0; i < s.profile_count; i++) {
+            dhikr_state_profile_label(&s, i, label, sizeof(label));
+            EXPECT((label[0] == '*') == (i == sel)); // exactly one marker
+        }
+        // Editing another profile's target leaves the marker where it is.
+        uint8_t other = (uint8_t)((sel + 1) % s.profile_count);
+        dhikr_state_set_target(&s, other, s.profiles[other].counter.target == 99 ? 33 : 99);
+        EXPECT_EQ_U(s.active, sel);
+    }
+}
+
+static void test_builtin_actions_restricted(void) { // [U6]
+    DhikrState s;
+    dhikr_state_init_defaults(&s);
+    for(uint8_t i = 0; i < s.profile_count; i++) {
+        if(!s.profiles[i].builtin) continue;
+        DhikrProfileAction actions[DhikrProfileActionCount];
+        EXPECT_EQ_U(dhikr_profile_actions(&s.profiles[i], actions), 1);
+        EXPECT_EQ_U(actions[0], DhikrProfileActionTarget);
+        EXPECT(!dhikr_profile_action_allowed(&s.profiles[i], DhikrProfileActionRename));
+        EXPECT(!dhikr_profile_action_allowed(&s.profiles[i], DhikrProfileActionDelete));
+        // The model refuses as well, independent of the menu.
+        EXPECT(dhikr_state_rename(&s, i, "X") != DhikrProfileOk);
+        EXPECT(dhikr_state_delete(&s, i) != DhikrProfileOk);
+        // But the target can be changed.
+        EXPECT(dhikr_state_set_target(&s, i, 99));
+    }
+    EXPECT(!dhikr_profile_action_allowed(NULL, DhikrProfileActionTarget));
+    EXPECT(!dhikr_profile_action_allowed(&s.profiles[0], DhikrProfileActionCount));
+}
+
+static void test_custom_profile_actions(void) { // [U7]
+    fake_reset();
+    DhikrState s, loaded;
+    dhikr_state_init_defaults(&s);
+    uint8_t a;
+    EXPECT_EQ_U(dhikr_state_add_custom(&s, "Salawat", 33, &a), DhikrProfileOk);
+    DhikrProfileAction actions[DhikrProfileActionCount];
+    EXPECT_EQ_U(dhikr_profile_actions(&s.profiles[a], actions), 3);
+    EXPECT_EQ_U(actions[0], DhikrProfileActionTarget);
+    EXPECT_EQ_U(actions[1], DhikrProfileActionRename);
+    EXPECT_EQ_U(actions[2], DhikrProfileActionDelete);
+    char label[40];
+    dhikr_profile_action_label(&s.profiles[a], DhikrProfileActionRename, label, sizeof(label));
+    EXPECT(strcmp(label, "Rename Profile") == 0);
+    dhikr_profile_action_label(&s.profiles[a], DhikrProfileActionDelete, label, sizeof(label));
+    EXPECT(strcmp(label, "Delete Profile") == 0);
+
+    // Target, rename and delete work as in v1.0.2 and are saved.
+    s.profiles[a].counter.count = 9;
+    EXPECT(dhikr_state_set_target(&s, a, 100));
+    EXPECT_EQ_U(dhikr_state_rename(&s, a, "Salawat Nabi"), DhikrProfileOk);
+    EXPECT_EQ_U(save_and_reload(&s, &loaded), DhikrLoadOk);
+    EXPECT(strcmp(loaded.profiles[a].name, "Salawat Nabi") == 0);
+    EXPECT_EQ_U(loaded.profiles[a].counter.target, 100);
+    EXPECT_EQ_U(loaded.profiles[a].counter.count, 9);
+    EXPECT_EQ_U(dhikr_state_delete(&loaded, a), DhikrProfileOk);
+    EXPECT_EQ_U(loaded.profile_count, 4);
+}
+
+static void test_sets_persist_after_restart(void) { // [U8]
+    fake_reset();
+    DhikrState s, loaded;
+    dhikr_state_init_defaults(&s);
+    DhikrBanner banner = {0};
+    // Two full sets of 33 plus 5 counts.
+    for(int i = 0; i < 2 * 33 + 5; i++) {
+        dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 0);
+    }
+    EXPECT_EQ_U(s.profiles[0].counter.rounds, 2);
+    EXPECT_EQ_U(s.profiles[0].counter.count, 5);
+    EXPECT_EQ_U(save_and_reload(&s, &loaded), DhikrLoadOk);
+    EXPECT_EQ_U(loaded.profiles[0].counter.rounds, 2);
+    EXPECT_EQ_U(loaded.profiles[0].counter.count, 5);
+    EXPECT(states_equal(&s, &loaded));
+}
+
+static void test_set_banner_and_undo(void) { // [U9]
+    DhikrState s;
+    dhikr_state_init_defaults(&s);
+    DhikrBanner banner = {0};
+    DhikrProfile* p = dhikr_state_active(&s);
+    p->counter.count = 32;
+
+    // Completing the first set: banner "33/33 Set 1 complete!", target feedback once.
+    DhikrActionOutcome o = dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 100);
+    EXPECT_EQ_U(o.feedback_event, DhikrFeedbackEventTarget);
+    EXPECT_EQ_U(banner.kind, DhikrBannerTarget);
+    EXPECT_EQ_U(banner.value, 33);
+    EXPECT_EQ_U(banner.set_number, 1);
+    EXPECT_EQ_U(p->counter.count, 0);
+    EXPECT_EQ_U(p->counter.rounds, 1);
+
+    // Undo right after it restores the set: 32/33, Sets: 0.
+    o = dhikr_counter_apply(&s, &banner, DhikrCounterActionUndo, 200);
+    EXPECT(o.changed && o.save_now && !o.play_feedback);
+    EXPECT_EQ_U(banner.kind, DhikrBannerRoundRestored);
+    EXPECT_EQ_U(banner.set_number, 0);
+    EXPECT_EQ_U(p->counter.count, 32);
+    EXPECT_EQ_U(p->counter.rounds, 0);
+
+    // Completing it again counts exactly one set, then the next one is set 2.
+    dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 300);
+    EXPECT_EQ_U(banner.set_number, 1);
+    EXPECT_EQ_U(p->counter.rounds, 1);
+    for(int i = 0; i < 32; i++) dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 400);
+    EXPECT_EQ_U(banner.kind, DhikrBannerNone); // normal counts close the banner
+    dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 500);
+    EXPECT_EQ_U(banner.set_number, 2);
+    EXPECT_EQ_U(p->counter.rounds, 2);
+
+    // Switching profiles clears the banner (and its set number).
+    dhikr_counter_apply(&s, &banner, DhikrCounterActionNextProfile, 600);
+    EXPECT_EQ_U(banner.kind, DhikrBannerNone);
+    EXPECT_EQ_U(banner.set_number, 0);
+}
+
+static void test_target_change_keeps_counts_and_sets(void) { // [U10]
+    DhikrState s;
+    dhikr_state_init_defaults(&s);
+    DhikrBanner banner = {0};
+    DhikrProfile* p = dhikr_state_active(&s);
+    p->counter.count = 10;
+    p->counter.rounds = 3;
+
+    // Raising the target: count and completed sets stay as they are; the old
+    // sets are not re-interpreted against the new target.
+    EXPECT(dhikr_state_set_target(&s, 0, 99));
+    EXPECT_EQ_U(p->counter.count, 10);
+    EXPECT_EQ_U(p->counter.rounds, 3);
+
+    // Lowering it below the count: nothing changes until the next press,
+    // which completes exactly one set.
+    EXPECT(dhikr_state_set_target(&s, 0, 5));
+    EXPECT_EQ_U(p->counter.count, 10);
+    EXPECT_EQ_U(p->counter.rounds, 3);
+    dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 0);
+    EXPECT_EQ_U(p->counter.count, 0);
+    EXPECT_EQ_U(p->counter.rounds, 4);
+    EXPECT_EQ_U(banner.set_number, 4);
+
+    // A target change right after a set clears the set undo (the restored
+    // count would refer to the old target).
+    EXPECT(dhikr_state_set_target(&s, 0, 33));
+    EXPECT_EQ_U(dhikr_counter_undo(&p->counter), DhikrUndoNothing);
+    EXPECT_EQ_U(p->counter.rounds, 4);
+}
+
+/* A settings file exactly as v1.0.2 wrote it (generated with the v1.0.2 tag). */
+static const char* const V102_FILE = "FlipperDhikr\n"
+                                     "version=3\n"
+                                     "active=c1\n"
+                                     "feedback.counter_vibration=1\n"
+                                     "feedback.counter_sound=0\n"
+                                     "feedback.target_vibration=1\n"
+                                     "feedback.target_sound=0\n"
+                                     "next_custom_id=2\n"
+                                     "custom_profiles=custom,c1\n"
+                                     "profile.subhanallah.count=5\n"
+                                     "profile.subhanallah.target=33\n"
+                                     "profile.subhanallah.rounds=7\n"
+                                     "profile.alhamdulillah.count=0\n"
+                                     "profile.alhamdulillah.target=99\n"
+                                     "profile.alhamdulillah.rounds=2\n"
+                                     "profile.allahu_akbar.count=0\n"
+                                     "profile.allahu_akbar.target=33\n"
+                                     "profile.allahu_akbar.rounds=0\n"
+                                     "profile.custom.name=Custom Dhikr\n"
+                                     "profile.custom.count=0\n"
+                                     "profile.custom.target=33\n"
+                                     "profile.custom.rounds=0\n"
+                                     "profile.c1.name=Istighfar\n"
+                                     "profile.c1.count=42\n"
+                                     "profile.c1.target=100\n"
+                                     "profile.c1.rounds=3\n"
+                                     "crc32=2FD49427\n";
+
+static void test_v1_0_2_settings_compatible(void) { // [U11]
+    fake_reset();
+    const size_t len = strlen(V102_FILE);
+    fake_put(&g_fs, DHIKR_SETTINGS_PATH, V102_FILE, len);
+    DhikrStore store;
+    DhikrState loaded;
+    dhikr_store_init(&store, &g_io);
+    // Loaded as the current format: no migration, no backup.
+    EXPECT_EQ_U(dhikr_store_load(&store, &loaded), DhikrLoadOk);
+    EXPECT_EQ_U(DHIKR_SETTINGS_VERSION, 3);
+    EXPECT(strcmp(dhikr_state_active(&loaded)->name, "Istighfar") == 0);
+    EXPECT_EQ_U(loaded.profiles[0].counter.rounds, 7); // sets kept
+    EXPECT_EQ_U(loaded.profiles[1].counter.target, 99);
+    EXPECT_EQ_U(loaded.profiles[4].counter.count, 42);
+    DhikrFeedbackSettings expected = fb(true, false, true, false);
+    EXPECT(feedback_equal(&loaded.feedback, &expected));
+
+    // Writing it back produces byte-identical content: the format is unchanged.
+    char buffer[DHIKR_SETTINGS_BUFFER_SIZE];
+    size_t n = dhikr_settings_serialize(&loaded, buffer, sizeof(buffer));
+    EXPECT_EQ_U(n, len);
+    EXPECT(n == len && memcmp(buffer, V102_FILE, len) == 0);
+    EXPECT_EQ_U(dhikr_store_save(&store, &loaded), DhikrSaveUnchanged);
+}
+
+static void test_feedback_unchanged_by_ux_update(void) { // [U12]
+    // All 16 switch combinations still select exactly one pattern per event, and
+    // completing a set (the renamed round) still requests only the target pattern.
+    for(unsigned bits = 0; bits < 16; bits++) {
+        DhikrFeedbackSettings f = fb(bits & 1, bits & 2, bits & 4, bits & 8);
+        DhikrFeedbackPattern count = dhikr_feedback_select(&f, DhikrFeedbackEventCount);
+        DhikrFeedbackPattern target = dhikr_feedback_select(&f, DhikrFeedbackEventTarget);
+        EXPECT(!dhikr_feedback_pattern_is_target(count));
+        EXPECT(target == DhikrFeedbackPatternNone || dhikr_feedback_pattern_is_target(target));
+        EXPECT_EQ_U(dhikr_feedback_pattern_uses_vibro(count), (bits & 1) != 0);
+        EXPECT_EQ_U(dhikr_feedback_pattern_uses_sound(count), (bits & 2) != 0);
+        EXPECT_EQ_U(dhikr_feedback_pattern_uses_vibro(target), (bits & 4) != 0);
+        EXPECT_EQ_U(dhikr_feedback_pattern_uses_sound(target), (bits & 8) != 0);
+    }
+    DhikrState s;
+    dhikr_state_init_defaults(&s);
+    DhikrBanner banner = {0};
+    dhikr_state_set_target(&s, 0, 3);
+    int target_events = 0;
+    for(int i = 0; i < 9; i++) {
+        DhikrActionOutcome o = dhikr_counter_apply(&s, &banner, DhikrCounterActionIncrement, 0);
+        if(o.feedback_event == DhikrFeedbackEventTarget) target_events++;
+    }
+    EXPECT_EQ_U(target_events, 3);
+    EXPECT_EQ_U(s.profiles[0].counter.rounds, 3);
+}
+
 static void test_crc32_known_vector(void) {
     EXPECT_EQ_U(dhikr_crc32("123456789", 9), 0xCBF43926UL);
 }
@@ -1523,6 +1839,20 @@ int main(void) {
     RUN_TEST(test_feedback_migration_from_v2);
     RUN_TEST(test_feedback_migration_chain_from_v1);
     RUN_TEST(test_feedback_corrupt_files);
+
+    // v1.0.3 menu and UX [U1-U12]
+    RUN_TEST(test_main_menu_without_target_settings);
+    RUN_TEST(test_edit_target_reachable_for_every_profile);
+    RUN_TEST(test_edit_inactive_profile_keeps_active);
+    RUN_TEST(test_set_target_rejects_invalid);
+    RUN_TEST(test_profile_selection_and_marker);
+    RUN_TEST(test_builtin_actions_restricted);
+    RUN_TEST(test_custom_profile_actions);
+    RUN_TEST(test_sets_persist_after_restart);
+    RUN_TEST(test_set_banner_and_undo);
+    RUN_TEST(test_target_change_keeps_counts_and_sets);
+    RUN_TEST(test_v1_0_2_settings_compatible);
+    RUN_TEST(test_feedback_unchanged_by_ux_update);
 
     printf("\n%d tests, %d failed\n", g_tests_run, g_tests_failed);
     return g_tests_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
